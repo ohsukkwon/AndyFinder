@@ -1,0 +1,8 @@
+{
+  "favorites": [
+    {
+      "name": "dumpstate구조",
+      "value": "^(== dumpstate:|--------- beginning of|------ EVENT LOG |------ SYSTEM LOG |------ RADIO LOG |------ KERNEL LOG |------ |--------- |----------------------- |----- pid|Cmd line: |Build fingerprint:|== Android Framework Services|== Running Application|== Dropbox crashes|FRAMEWORK|------ DUMPSYS CRITICAL |------ DUMPSYS HIGH |\\*\\* MEMINFO|ACTIVITY MANAGER RUNNING PROCESSES |== dumpstate: done|DUMP OF SERVICE )"
+    }
+  ]
+}
