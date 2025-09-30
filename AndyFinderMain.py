@@ -3,6 +3,7 @@ import sys
 import os
 import re
 import json
+import subprocess
 from datetime import datetime
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
@@ -12,8 +13,8 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt, Signal, QObject, QModelIndex, QTimer
 
 # ------------------------------ 버전 관리 ------------------------------
-VER_INFO__ver_1_250102_0001 = "ver_1_250102_0001"
-VER_DESC__ver_1_250102_0001 = '''
+VER_INFO__ver_1_251001_1040 = "ver_1_251001_1040"
+VER_DESC__ver_1_251001_1040 = '''
 1. Highlight Color 유지 기능 추가 - lineView의 mouse event에도 Color 하이라이트 유지.
 2. 프로그램 Title에 버전 정보 추가.
 3. 북마크 기능 추가 - Line Number 더블클릭으로 북마크 토글, F2/Shift+F2로 이동.
@@ -26,12 +27,14 @@ VER_DESC__ver_1_250102_0001 = '''
 10. Ctrl+F 실행시 선택된 텍스트를 검색어로 자동 입력.
 11. tblResults row 더블클릭으로 Light Green 마킹 토글 기능 추가.
 12. tblResults에서 F2/Shift+F2로 마킹된 row 이동 기능 추가.
+13. tblResults LineNumber를 lineView LineNumber로 Drag&Drop하여 범위 복사 기능 추가.
+14. 즐겨찾기 Category(폴더 구조) 지원: 세 가지 즐겨찾기(기본 검색어/결과내 검색/Color 키워드)에 폴더 생성/이동/선택 기능 추가.
 '''
 
 # # # # # # # # # # # # # # # # Config # # # # # # # # # # # # # # # # # #
-gCurVerInfo = VER_INFO__ver_1_250102_0001
-gCurVerDesc = VER_DESC__ver_1_250102_0001
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+gCurVerInfo = VER_INFO__ver_1_251001_1040
+gCurVerDesc = VER_DESC__ver_1_251001_1040
+# # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
 # ------------------------------ Global 변수 ------------------------------
@@ -157,7 +160,9 @@ class LineViewSearchDialog(QtWidgets.QDialog):
         self.btn_close = QtWidgets.QPushButton("닫기")
 
         btn_layout.addWidget(self.btn_prev)
+        self.btn_prev.setAutoDefault(False)
         btn_layout.addWidget(self.btn_next)
+        self.btn_next.setAutoDefault(False)
         btn_layout.addStretch()
         btn_layout.addWidget(self.btn_close)
         layout.addLayout(btn_layout)
@@ -208,12 +213,13 @@ class LineViewSearchDialog(QtWidgets.QDialog):
 # ------------------------------ 즐겨찾기 추가 다이얼로그 ------------------------------
 
 class FavoriteAddDialog(QtWidgets.QDialog):
-    """즐겨찾기 추가를 위한 입력 다이얼로그"""
+    """즐겨찾기 추가/수정 입력 다이얼로그"""
 
-    def __init__(self, current_value="", parent=None):
+    def __init__(self, current_value="", current_name="", parent=None):
         super().__init__(parent)
-        self.setWindowTitle("즐겨찾기 추가")
+        self.setWindowTitle("즐겨찾기 추가/수정")
         self.current_value = current_value
+        self.init_name = current_name
         self.name = ""
         self.value = ""
         self.setup_ui()
@@ -226,6 +232,8 @@ class FavoriteAddDialog(QtWidgets.QDialog):
 
         self.edt_name = QtWidgets.QLineEdit()
         self.edt_name.setPlaceholderText("즐겨찾기 이름 입력...")
+        if self.init_name:
+            self.edt_name.setText(self.init_name)
         form_layout.addRow("이름:", self.edt_name)
 
         self.edt_value = QtWidgets.QLineEdit()
@@ -266,34 +274,72 @@ class FavoriteAddDialog(QtWidgets.QDialog):
         self.accept()
 
 
-# ------------------------------ 즐겨찾기 다이얼로그 ------------------------------
+# ------------------------------ 즐겨찾기 트리 위젯 (드래그 앤 드롭 내부 이동 전용) ------------------------------
+
+class FavoritesTree(QtWidgets.QTreeWidget):
+    internalMoveFinished = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # 드래그 앤 드롭 설정
+        self.setDragEnabled(True)
+        self.setAcceptDrops(True)
+        self.viewport().setAcceptDrops(True)
+        self.setDropIndicatorShown(True)
+        self.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
+
+    def dropEvent(self, event: QtGui.QDropEvent):
+        super().dropEvent(event)
+        # 내부 이동 후 알림
+        self.internalMoveFinished.emit()
+
+
+# ------------------------------ 즐겨찾기 다이얼로그 (폴더 구조 + Drag & Drop 이동) ------------------------------
 
 class FavoriteDialog(QtWidgets.QDialog):
-    """즐겨찾기 관리 다이얼로그"""
+    """즐겨찾기 관리 다이얼로그 (폴더 구조 + Drag & Drop 이동 지원)"""
+
+    ROLE_PATH = Qt.UserRole          # 내부 경로(인덱스 리스트)
+    ROLE_TYPE = Qt.UserRole + 1      # 'folder' or 'item'
 
     def __init__(self, title, json_path, current_value="", parent=None):
         super().__init__(parent)
         self.setWindowTitle(title)
         self.json_path = json_path
         self.current_value = current_value
-        self.favorites = self.load_favorites()
+        self.favorites = self.load_favorites()  # list of nodes (folder/item)
         self.selected_value = None
         self.setup_ui()
 
+    # ---------- 데이터 로드/저장 ----------
     def load_favorites(self):
-        """즐겨찾기 로드"""
+        """폴더 구조의 즐겨찾기 로드 (구버전 평면 포맷 자동 변환)"""
         if os.path.exists(self.json_path):
             try:
                 with open(self.json_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    return data.get('favorites', [])
+                    favs = data.get('favorites', [])
+                    # 구버전(평면 리스트) -> item 노드로 변환
+                    needs_migrate = False
+                    for e in favs:
+                        if not isinstance(e, dict) or 'type' not in e:
+                            needs_migrate = True
+                            break
+                    if needs_migrate:
+                        migrated = []
+                        for e in favs:
+                            if isinstance(e, dict) and 'name' in e and 'value' in e:
+                                migrated.append({'type': 'item', 'name': e['name'], 'value': e.get('value', '')})
+                        return migrated
+                    # 이미 폴더 구조
+                    return favs
             except Exception as e:
                 print(f"즐겨찾기 로드 실패: {e}")
                 return []
         return []
 
     def save_favorites(self):
-        """즐겨찾기 저장"""
+        """즐겨찾기 저장 (폴더 구조)"""
         try:
             os.makedirs(os.path.dirname(self.json_path), exist_ok=True)
             with open(self.json_path, 'w', encoding='utf-8') as f:
@@ -301,119 +347,286 @@ class FavoriteDialog(QtWidgets.QDialog):
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "오류", f"저장 실패: {e}")
 
+    # ---------- UI ----------
     def setup_ui(self):
-        """UI 구성"""
         layout = QtWidgets.QVBoxLayout(self)
 
-        # 안내 레이블
-        info_label = QtWidgets.QLabel("더블클릭 또는 선택 버튼으로 항목을 선택할 수 있습니다.")
+        info_label = QtWidgets.QLabel("폴더/아이템을 더블클릭하거나, 버튼 또는 드래그앤드롭으로 관리할 수 있습니다.\n- 아이템을 폴더로 드래그하여 이동, 루트(바깥)로 드래그하여 루트로 이동할 수 있습니다.")
         layout.addWidget(info_label)
 
-        # 리스트
-        self.list_widget = QtWidgets.QListWidget()
-        self.refresh_list()
-        self.list_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
-        layout.addWidget(self.list_widget)
+        # 트리
+        self.tree = FavoritesTree()
+        self.tree.setColumnCount(2)
+        self.tree.setHeaderLabels(["이름", "값"])
+        self.tree.header().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+        self.tree.header().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
+        self.tree.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.tree.itemDoubleClicked.connect(self.on_item_double_clicked)
+        # 드래그 내부 이동 완료 후 데이터/파일 저장 및 트리 갱신
+        self.tree.internalMoveFinished.connect(self.on_tree_internal_move)
+        layout.addWidget(self.tree, 1)
 
         # 버튼들
         btn_layout = QtWidgets.QHBoxLayout()
 
-        self.btn_add = QtWidgets.QPushButton("추가")
+        self.btn_add_folder = QtWidgets.QPushButton("폴더 추가")
+        self.btn_add_item = QtWidgets.QPushButton("즐겨찾기 추가")
         self.btn_edit = QtWidgets.QPushButton("수정")
         self.btn_delete = QtWidgets.QPushButton("삭제")
         self.btn_select = QtWidgets.QPushButton("선택")
         self.btn_close = QtWidgets.QPushButton("닫기")
 
-        btn_layout.addWidget(self.btn_add)
+        btn_layout.addWidget(self.btn_add_folder)
+        btn_layout.addWidget(self.btn_add_item)
         btn_layout.addWidget(self.btn_edit)
         btn_layout.addWidget(self.btn_delete)
         btn_layout.addWidget(self.btn_select)
         btn_layout.addStretch()
         btn_layout.addWidget(self.btn_close)
-
         layout.addLayout(btn_layout)
 
-        # 시그널 연결
-        self.btn_add.clicked.connect(self.add_favorite)
-        self.btn_edit.clicked.connect(self.edit_favorite)
-        self.btn_delete.clicked.connect(self.delete_favorite)
+        self.btn_add_folder.clicked.connect(self.add_folder)
+        self.btn_add_item.clicked.connect(self.add_favorite)
+        self.btn_edit.clicked.connect(self.edit_node)
+        self.btn_delete.clicked.connect(self.delete_node)
         self.btn_select.clicked.connect(self.select_favorite)
         self.btn_close.clicked.connect(self.reject)
 
-        self.resize(600, 400)
+        self.resize(700, 500)
+        self.refresh_tree(expand_all=True)
 
-    def refresh_list(self):
-        """리스트 갱신"""
-        self.list_widget.clear()
-        for fav in self.favorites:
-            item = QtWidgets.QListWidgetItem(f"{fav['name']}: {fav['value']}")
-            self.list_widget.addItem(item)
+    # ---------- 트리 헬퍼 ----------
+    def refresh_tree(self, expand_all=False):
+        self.tree.clear()
+        self._build_tree_items(self.tree.invisibleRootItem(), self.favorites, [])
+
+        if expand_all:
+            self.tree.expandAll()
+        else:
+            self.tree.expandToDepth(1)
+
+    def _set_item_flags(self, qitem: QtWidgets.QTreeWidgetItem, node_type: str):
+        flags = qitem.flags()
+        # 공통
+        flags |= Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled
+        # 폴더만 드롭 허용
+        if node_type == 'folder':
+            flags |= Qt.ItemIsDropEnabled
+        else:
+            flags &= ~Qt.ItemIsDropEnabled
+        qitem.setFlags(flags)
+
+    def _build_tree_items(self, parent_qitem: QtWidgets.QTreeWidgetItem, nodes: List[dict], path_prefix: List[int]):
+        style = self.style()
+        folder_icon = style.standardIcon(QtWidgets.QStyle.SP_DirIcon)
+        item_icon = style.standardIcon(QtWidgets.QStyle.SP_FileIcon)
+
+        for i, node in enumerate(nodes):
+            path = path_prefix + [i]
+            if node.get('type') == 'folder':
+                qitem = QtWidgets.QTreeWidgetItem([node.get('name', ''), ''])
+                qitem.setIcon(0, folder_icon)
+                qitem.setData(0, self.ROLE_PATH, path)
+                qitem.setData(0, self.ROLE_TYPE, 'folder')
+                self._set_item_flags(qitem, 'folder')
+                parent_qitem.addChild(qitem)
+                children = node.get('children', [])
+                self._build_tree_items(qitem, children, path)
+            else:  # item
+                qitem = QtWidgets.QTreeWidgetItem([node.get('name', ''), node.get('value', '')])
+                qitem.setIcon(0, item_icon)
+                qitem.setData(0, self.ROLE_PATH, path)
+                qitem.setData(0, self.ROLE_TYPE, 'item')
+                self._set_item_flags(qitem, 'item')
+                parent_qitem.addChild(qitem)
+
+    def _get_node_by_path(self, path: List[int]) -> Optional[dict]:
+        if not path:
+            return None
+        node = None
+        try:
+            node = self.favorites[path[0]]
+            for idx in path[1:]:
+                node = node['children'][idx]
+            return node
+        except Exception:
+            return None
+
+    def _get_parent_list_and_index(self, path: List[int]):
+        """해당 path의 부모 리스트와 index 반환"""
+        if not path:
+            return None, -1
+        if len(path) == 1:
+            return self.favorites, path[0]
+        parent = self.favorites[path[0]]
+        for idx in path[1:-1]:
+            parent = parent['children'][idx]
+        return parent.get('children', []), path[-1]
+
+    def _get_target_children_list_for_add(self, sel_item: Optional[QtWidgets.QTreeWidgetItem]):
+        """선택된 아이템 기준으로 추가될 대상 children 리스트 반환 (folder면 그 안, item이면 parent, 선택없으면 root)"""
+        if not sel_item:
+            return self.favorites
+        path = sel_item.data(0, self.ROLE_PATH)
+        node = self._get_node_by_path(path)
+        if not node:
+            return self.favorites
+        if node.get('type') == 'folder':
+            node.setdefault('children', [])
+            return node['children']
+        # item이면 부모 children
+        parent_list, _ = self._get_parent_list_and_index(path)
+        return parent_list if parent_list is not None else self.favorites
+
+    def _rebuild_from_tree(self) -> List[dict]:
+        """현재 트리 구조로 favorites 리스트를 재구성"""
+        def build_from_item(item: QtWidgets.QTreeWidgetItem) -> dict:
+            node_type = item.data(0, self.ROLE_TYPE)
+            name = item.text(0)
+            if node_type == 'folder':
+                children = [build_from_item(item.child(i)) for i in range(item.childCount())]
+                return {'type': 'folder', 'name': name, 'children': children}
+            else:
+                value = item.text(1)
+                return {'type': 'item', 'name': name, 'value': value}
+
+        root = self.tree.invisibleRootItem()
+        rebuilt: List[dict] = []
+        for i in range(root.childCount()):
+            rebuilt.append(build_from_item(root.child(i)))
+        return rebuilt
+
+    # ---------- 드래그 앤 드롭 콜백 ----------
+    def on_tree_internal_move(self):
+        """트리 내부 이동(drop) 후 favorites를 재구성/저장하고 트리 갱신"""
+        try:
+            self.favorites = self._rebuild_from_tree()
+            self.save_favorites()
+            # 경로(path) 정보를 다시 정합하게 하기 위해 트리 재구성
+            self.refresh_tree(expand_all=True)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "오류", f"드래그 이동 처리 실패: {e}")
+
+    # ---------- 액션 ----------
+    def add_folder(self):
+        sel_item = self.tree.currentItem()
+        target_list = self._get_target_children_list_for_add(sel_item)
+
+        name, ok = QtWidgets.QInputDialog.getText(self, "폴더 추가", "폴더 이름:")
+        if not ok:
+            return
+        name = name.strip()
+        if not name:
+            QtWidgets.QMessageBox.warning(self, "경고", "폴더 이름을 입력하세요.")
+            return
+
+        target_list.append({'type': 'folder', 'name': name, 'children': []})
+        self.save_favorites()
+        self.refresh_tree(expand_all=True)
 
     def add_favorite(self):
-        """즐겨찾기 추가"""
-        name, ok1 = QtWidgets.QInputDialog.getText(self, "이름 입력", "즐겨찾기 이름:")
-        if not ok1 or not name.strip():
+        sel_item = self.tree.currentItem()
+        target_list = self._get_target_children_list_for_add(sel_item)
+
+        dlg = FavoriteAddDialog(current_value=self.current_value, parent=self)
+        if dlg.exec() != QtWidgets.QDialog.Accepted:
             return
 
-        value, ok2 = QtWidgets.QInputDialog.getText(self, "값 입력", "값:", text=self.current_value)
-        if not ok2:
-            return
-
-        self.favorites.append({'name': name.strip(), 'value': value})
+        target_list.append({'type': 'item', 'name': dlg.name, 'value': dlg.value})
         self.save_favorites()
-        self.refresh_list()
+        self.refresh_tree(expand_all=True)
 
-    def edit_favorite(self):
-        """즐겨찾기 수정"""
-        current = self.list_widget.currentRow()
-        if current < 0:
+    def edit_node(self):
+        sel_item = self.tree.currentItem()
+        if not sel_item:
             QtWidgets.QMessageBox.warning(self, "경고", "수정할 항목을 선택하세요.")
             return
 
-        fav = self.favorites[current]
-
-        name, ok1 = QtWidgets.QInputDialog.getText(self, "이름 수정", "이름:", text=fav['name'])
-        if not ok1:
+        path = sel_item.data(0, self.ROLE_PATH)
+        node = self._get_node_by_path(path)
+        if not node:
             return
 
-        value, ok2 = QtWidgets.QInputDialog.getText(self, "값 수정", "값:", text=fav['value'])
-        if not ok2:
-            return
+        if node.get('type') == 'folder':
+            new_name, ok = QtWidgets.QInputDialog.getText(self, "폴더 이름 수정", "이름:", text=node.get('name', ''))
+            if not ok:
+                return
+            new_name = new_name.strip()
+            if not new_name:
+                QtWidgets.QMessageBox.warning(self, "경고", "이름을 입력하세요.")
+                return
+            node['name'] = new_name
+        else:
+            dlg = FavoriteAddDialog(current_value=node.get('value', ''), current_name=node.get('name', ''), parent=self)
+            if dlg.exec() != QtWidgets.QDialog.Accepted:
+                return
+            node['name'] = dlg.name
+            node['value'] = dlg.value
 
-        self.favorites[current] = {'name': name.strip(), 'value': value}
         self.save_favorites()
-        self.refresh_list()
+        self.refresh_tree(expand_all=True)
 
-    def delete_favorite(self):
-        """즐겨찾기 삭제"""
-        current = self.list_widget.currentRow()
-        if current < 0:
+    def delete_node(self):
+        sel_item = self.tree.currentItem()
+        if not sel_item:
             QtWidgets.QMessageBox.warning(self, "경고", "삭제할 항목을 선택하세요.")
             return
 
-        reply = QtWidgets.QMessageBox.question(
-            self, "확인", "선택한 항목을 삭제하시겠습니까?",
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
-        )
+        path = sel_item.data(0, self.ROLE_PATH)
+        node = self._get_node_by_path(path)
+        if not node:
+            return
 
-        if reply == QtWidgets.QMessageBox.Yes:
-            del self.favorites[current]
-            self.save_favorites()
-            self.refresh_list()
+        if node.get('type') == 'folder':
+            reply = QtWidgets.QMessageBox.question(
+                self, "확인", f"폴더 '{node.get('name','')}' 및 하위 모든 항목을 삭제하시겠습니까?",
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            )
+        else:
+            reply = QtWidgets.QMessageBox.question(
+                self, "확인", f"'{node.get('name','')}' 항목을 삭제하시겠습니까?",
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            )
+
+        if reply != QtWidgets.QMessageBox.Yes:
+            return
+
+        parent_list, idx = self._get_parent_list_and_index(path)
+        if parent_list is None or idx < 0 or idx >= len(parent_list):
+            return
+
+        del parent_list[idx]
+        self.save_favorites()
+        self.refresh_tree(expand_all=True)
 
     def select_favorite(self):
-        """즐겨찾기 선택"""
-        current = self.list_widget.currentRow()
-        if current < 0:
+        sel_item = self.tree.currentItem()
+        if not sel_item:
             QtWidgets.QMessageBox.warning(self, "경고", "선택할 항목을 선택하세요.")
             return
 
-        self.selected_value = self.favorites[current]['value']
+        path = sel_item.data(0, self.ROLE_PATH)
+        node = self._get_node_by_path(path)
+        if not node:
+            return
+
+        if node.get('type') != 'item':
+            QtWidgets.QMessageBox.information(self, "안내", "폴더는 선택할 수 없습니다. 아이템을 선택하세요.")
+            return
+
+        self.selected_value = node.get('value', '')
         self.accept()
 
-    def on_item_double_clicked(self, item):
-        """아이템 더블클릭"""
-        self.select_favorite()
+    def on_item_double_clicked(self, item, column):
+        """폴더는 펼침/접기, 아이템은 선택"""
+        path = item.data(0, self.ROLE_PATH)
+        node = self._get_node_by_path(path)
+        if not node:
+            return
+        if node.get('type') == 'folder':
+            self.tree.setItemExpanded(item, not self.tree.isItemExpanded(item))
+        else:
+            self.select_favorite()
 
 
 # ------------------------------ 설정 저장/불러오기 다이얼로그 ------------------------------
@@ -494,7 +707,9 @@ class ConfigLoadDialog(QtWidgets.QDialog):
         self.btn_delete = QtWidgets.QPushButton("삭제")
         self.btn_cancel = QtWidgets.QPushButton("취소")
         btn_layout.addWidget(self.btn_load)
+        self.btn_load.setAutoDefault(False)
         btn_layout.addWidget(self.btn_delete)
+        self.btn_delete.setAutoDefault(False)
         btn_layout.addStretch()
         btn_layout.addWidget(self.btn_cancel)
         layout.addLayout(btn_layout)
@@ -562,6 +777,7 @@ class LineNumberArea(QtWidgets.QWidget):
     def __init__(self, editor):
         super().__init__(editor)
         self.codeEditor = editor
+        self.setAcceptDrops(True)  # 드롭 허용
 
     def sizeHint(self):
         return QtCore.QSize(self.codeEditor.lineNumberAreaWidth(), 0)
@@ -588,6 +804,68 @@ class LineNumberArea(QtWidgets.QWidget):
 
         super().mouseDoubleClickEvent(event)
 
+    def dragEnterEvent(self, event):
+        """드래그 진입 이벤트"""
+        if event.mimeData().hasText():
+            text = event.mimeData().text()
+            if text.startswith("LINENUMBER:"):
+                event.acceptProposedAction()
+            else:
+                event.ignore()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        """드래그 이동 이벤트"""
+        if event.mimeData().hasText():
+            text = event.mimeData().text()
+            if text.startswith("LINENUMBER:"):
+                event.acceptProposedAction()
+            else:
+                event.ignore()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        """드롭 이벤트 - tblResults의 LineNumber를 받아서 범위 복사"""
+        if event.mimeData().hasText():
+            text = event.mimeData().text()
+            if text.startswith("LINENUMBER:"):
+                try:
+                    # LineNumber 추출
+                    source_line_number = int(text.replace("LINENUMBER:", ""))
+
+                    # 드롭된 위치의 LineNumber 계산
+                    block = self.codeEditor.firstVisibleBlock()
+                    top = self.codeEditor.blockBoundingGeometry(block).translated(
+                        self.codeEditor.contentOffset()).top()
+                    bottom = top + self.codeEditor.blockBoundingRect(block).height()
+
+                    target_line_number = -1
+                    while block.isValid():
+                        if top <= event.pos().y() <= bottom:
+                            target_line_number = block.blockNumber() + 1
+                            break
+
+                        block = block.next()
+                        top = bottom
+                        bottom = top + self.codeEditor.blockBoundingRect(block).height()
+
+                    if target_line_number > 0:
+                        # MainWindow의 복사 메서드 호출
+                        main_window = self.codeEditor.window()
+                        if hasattr(main_window, 'copy_lines_between'):
+                            main_window.copy_lines_between(source_line_number, target_line_number)
+                        event.acceptProposedAction()
+                    else:
+                        event.ignore()
+                except ValueError:
+                    event.ignore()
+            else:
+                event.ignore()
+        else:
+            event.ignore()
+
 
 class CodeEditor(QtWidgets.QPlainTextEdit):
     def __init__(self):
@@ -595,6 +873,18 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
         self.lineNumberArea = LineNumberArea(self)
         self.color_highlight_selections = []
         self.bookmarks = set()
+
+        # 가로/세로 스크롤바 항상 표시
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+
+        # 자동 줄바꿈 비활성화: 긴 한 줄은 한 줄로 보여주고 가로 스크롤로 이동
+        self.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        try:
+            # 일부 플랫폼에서 추가로 필요할 수 있음
+            self.setWordWrapMode(QtGui.QTextOption.NoWrap)
+        except Exception:
+            pass
 
         self.blockCountChanged.connect(self.updateLineNumberAreaWidth)
         self.updateRequest.connect(self.updateLineNumberArea)
@@ -1059,6 +1349,28 @@ class DragDropCodeEditor(CodeEditor):
         return (self.internal_search_index + 1, len(self.internal_search_matches))
 
     def keyPressEvent(self, event):
+        # Ctrl+1/2/3: 선택 텍스트를 지정 입력란에 추가
+        if event.modifiers() == Qt.ControlModifier and event.key() in (Qt.Key_1, Qt.Key_2, Qt.Key_3):
+            cursor = self.textCursor()
+            if cursor.hasSelection():
+                selected_text = cursor.selectedText().replace('\u2029', '\n')
+                mw = self.window()
+                # MainWindow에 유틸 메서드가 존재할 때만 수행
+                if hasattr(mw, 'append_text_to_lineedit'):
+                    if event.key() == Qt.Key_1 and hasattr(mw, 'edt_query'):
+                        mw.append_text_to_lineedit(mw.edt_query, selected_text)
+                        event.accept()
+                        return
+                    elif event.key() == Qt.Key_2 and hasattr(mw, 'edt_result_search'):
+                        mw.append_text_to_lineedit(mw.edt_result_search, selected_text)
+                        event.accept()
+                        return
+                    elif event.key() == Qt.Key_3 and hasattr(mw, 'edt_color_keywords'):
+                        mw.append_text_to_lineedit(mw.edt_color_keywords, selected_text)
+                        event.accept()
+                        return
+            # 선택이 없으면 기본 처리로 넘김
+
         # Ctrl+F: 검색 다이얼로그 표시
         if event.key() == Qt.Key_F and event.modifiers() == Qt.ControlModifier:
             self.show_search_dialog()
@@ -1090,10 +1402,160 @@ class DragDropCodeEditor(CodeEditor):
         super().keyPressEvent(event)
 
 
+# ------------------------------ Drag 지원 TableView ------------------------------
+
+class DragTableView(QtWidgets.QTableView):
+    """드래그를 지원하는 TableView (Long Press + Move로 드래그 시작, 0번 컬럼(LineNumber) 전용)"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # 기본 자동 드래그는 끄고(충돌 방지), 수동으로 처리
+        self.setDragEnabled(False)
+        self.setDragDropMode(QtWidgets.QAbstractItemView.DragOnly)
+
+        # 스크롤바 항상 표시
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+
+        # 스크롤 모드: 픽셀 단위로 스크롤(가로/세로 모두 자연스럽게 드래그 가능)
+        self.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+
+        # 자동 줄바꿈 비활성화: 한 줄 텍스트는 항상 한 줄로
+        self.setWordWrap(False)
+        # 텍스트 생략(elide) 비활성화: 가로 스크롤로 전체를 볼 수 있도록
+        self.setTextElideMode(Qt.ElideNone)
+
+        # Long press용 상태 변수
+        self._press_timer = QTimer(self)
+        self._press_timer.setSingleShot(True)
+        self._press_timer.timeout.connect(self._on_long_press_timeout)
+        self._long_press_duration = 500  # ms
+
+        self._pressed = False
+        self._press_pos = QtCore.QPoint()
+        self._press_index = QModelIndex()
+
+        # 드래그 이미지 설정용
+        self._drag_pixmap_size = QtCore.QSize(100, 30)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._pressed = True
+            self._press_pos = event.pos()
+            self._press_index = self.indexAt(event.pos())
+
+            # 선택은 기본 동작대로 수행
+            super().mousePressEvent(event)
+
+            # Long press 타이머 시작 (LineNumber(0번 컬럼)에서만)
+            if self._press_index.isValid() and self._press_index.column() == 0:
+                self._press_timer.start(self._long_press_duration)
+            else:
+                self._press_timer.stop()
+        else:
+            super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._pressed:
+            # 이동 거리 확인해서 기준 넘으면 즉시 드래그 시작
+            if (event.pos() - self._press_pos).manhattanLength() >= QtWidgets.QApplication.startDragDistance():
+                self._press_timer.stop()
+                if self._press_index.isValid() and self._press_index.column() == 0:
+                    self._start_drag(self._press_index)
+                self._pressed = False
+                return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._press_timer.stop()
+            self._pressed = False
+        super().mouseReleaseEvent(event)
+
+    def _on_long_press_timeout(self):
+        # 길게 누름이 유지되었고, 여전히 유효한 0번 컬럼이면 드래그 시작
+        if self._pressed and self._press_index.isValid() and self._press_index.column() == 0:
+            self._start_drag(self._press_index)
+            self._pressed = False
+
+    def _start_drag(self, index: QModelIndex):
+        if not index.isValid():
+            return
+
+        # 0번 컬럼(라인번호) 셀로 보정
+        model = self.model()
+        ln_index = model.index(index.row(), 0)
+        line_str = model.data(ln_index, Qt.DisplayRole)
+
+        if not line_str:
+            return
+
+        try:
+            line_number = int(str(line_str))
+        except ValueError:
+            return
+
+        # 드래그 데이터 설정
+        drag = QtGui.QDrag(self)
+        mime_data = QtCore.QMimeData()
+        mime_data.setText(f"LINENUMBER:{line_number}")
+        drag.setMimeData(mime_data)
+
+        # 드래그 시각적 표시
+        pixmap = QtGui.QPixmap(self._drag_pixmap_size)
+        pixmap.fill(QtGui.QColor(200, 200, 255, 180))
+        painter = QtGui.QPainter(pixmap)
+        painter.drawText(pixmap.rect(), Qt.AlignCenter, f"Line {line_number}")
+        painter.end()
+        drag.setPixmap(pixmap)
+        drag.setHotSpot(QtCore.QPoint(pixmap.width() // 2, pixmap.height() // 2))
+
+        # 드래그 실행 (Copy)
+        drag.exec_(Qt.CopyAction)
+
+    # 기존 startDrag는 사용하지 않지만, 혹시 모를 호출에 대비해 남겨둠
+    def startDrag(self, supportedActions):
+        index = self.currentIndex()
+        if not (index.isValid() and index.column() == 0):
+            return
+        self._start_drag(index)
+
+
+# ------------------------------ NoWrapDelegate (tblResults 1열 전용) ------------------------------
+
+class NoWrapDelegate(QtWidgets.QStyledItemDelegate):
+    """
+    - 줄바꿈 문자가 없는 텍스트: 반드시 한 줄로 표시되도록 sizeHint를 1줄 높이로 계산
+    - 줄바꿈 문자가 있는 텍스트: 각 줄을 그대로 표시하되, 최대 폭/줄 수에 맞게 크기 계산
+    - 너비는 텍스트의 실제 픽셀 폭을 기준으로 계산하여, 헤더가 ResizeToContents일 때
+      열 너비가 컨텐츠 폭만큼 넓어지고, 가로 스크롤로 전체를 확인할 수 있음
+    """
+    def sizeHint(self, option, index):
+        value = index.data(Qt.DisplayRole)
+        if not isinstance(value, str):
+            return super().sizeHint(option, index)
+
+        fm = option.fontMetrics
+        padding_w = 12
+        padding_h = 8
+
+        lines = value.split('\n')
+        if len(lines) == 1:
+            width = fm.horizontalAdvance(lines[0]) + padding_w
+            height = fm.height() + padding_h
+        else:
+            width = max(fm.horizontalAdvance(line) for line in lines) + padding_w
+            # 줄간격(lineSpacing)을 사용하면 자간이 포함된 높이를 얻을 수 있음
+            height = fm.lineSpacing() * len(lines) + padding_h
+
+        return QtCore.QSize(width, height)
+
+
 # ------------------------------ Results Model (마킹 기능 추가) ------------------------------
 
 class ResultsModel(QtCore.QAbstractTableModel):
-    HEADERS = ["Line", "검색결과"]
+    HEADERS = ["LineNumber", "검색결과"]
 
     def __init__(self):
         super().__init__()
@@ -1271,38 +1733,20 @@ class MainWindow(QtWidgets.QMainWindow):
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
-        # 편집 메뉴
-        edit_menu = menubar.addMenu('편집(&E)')
-
-        find_action = QtGui.QAction('찾기(&F)', self)
-        find_action.setShortcut('Ctrl+F')
-        find_action.triggered.connect(self.focus_search)
-        edit_menu.addAction(find_action)
-
         # 보기 메뉴
         view_menu = menubar.addMenu('보기(&V)')
-
-        zoom_in_action = QtGui.QAction('확대(&I)', self)
-        zoom_in_action.setShortcut('Ctrl+=')
-        zoom_in_action.triggered.connect(self.zoom_in)
-        view_menu.addAction(zoom_in_action)
-
-        zoom_out_action = QtGui.QAction('축소(&O)', self)
-        zoom_out_action.setShortcut('Ctrl+-')
-        zoom_out_action.triggered.connect(self.zoom_out)
-        view_menu.addAction(zoom_out_action)
 
         self.always_on_top_action = QtGui.QAction('항상위(&A)', self)
         self.always_on_top_action.setCheckable(True)
         self.always_on_top_action.toggled.connect(self.toggle_always_on_top)
         view_menu.addAction(self.always_on_top_action)
 
-        # 검색 메뉴
-        search_menu = menubar.addMenu('검색(&S)')
+        # Tools 메뉴
+        tools_menu = menubar.addMenu('Tools(&T)')
 
-        search_action = QtGui.QAction('검색 실행(&S)', self)
-        search_action.triggered.connect(self.do_search)
-        search_menu.addAction(search_action)
+        open_folder_action = QtGui.QAction('Loaded 파일위치 열기(&O)', self)
+        open_folder_action.triggered.connect(self.open_loaded_file_folder)
+        tools_menu.addAction(open_folder_action)
 
         # 도움말 메뉴
         help_menu = menubar.addMenu('도움말(&H)')
@@ -1315,19 +1759,27 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowFlag(Qt.WindowStaysOnTopHint, checked)
         self.show()
 
-    def focus_search(self):
-        # lineView에 focus가 있으면 내부 검색 다이얼로그 표시
-        if self.lineView.hasFocus():
-            self.lineView.show_search_dialog()
-        else:
-            self.edt_query.setFocus()
-            self.edt_query.selectAll()
+    def open_loaded_file_folder(self):
+        """로드된 파일이 존재하는 폴더를 탐색기로 열기"""
+        if not self.current_file_path:
+            QtWidgets.QMessageBox.information(self, "안내", "로드된 파일이 없습니다.")
+            return
 
-    def zoom_in(self):
-        self.lineView.zoomIn()
+        if not os.path.exists(self.current_file_path):
+            QtWidgets.QMessageBox.warning(self, "경고", "파일이 존재하지 않습니다.")
+            return
 
-    def zoom_out(self):
-        self.lineView.zoomOut()
+        folder_path = os.path.dirname(os.path.abspath(self.current_file_path))
+
+        try:
+            if sys.platform == 'win32':
+                os.startfile(folder_path)
+            elif sys.platform == 'darwin':
+                subprocess.Popen(['open', folder_path])
+            else:  # linux
+                subprocess.Popen(['xdg-open', folder_path])
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "오류", f"폴더 열기 실패: {e}")
 
     def show_about(self):
         QtWidgets.QMessageBox.about(
@@ -1351,6 +1803,14 @@ class MainWindow(QtWidgets.QMainWindow):
         first_layout.setSpacing(8)
 
         self.btn_open = QtWidgets.QPushButton("열기")
+        self.btn_open.setStyleSheet("""
+                    QPushButton {
+                        background-color: #8FB31D;
+                        color: black;
+                        font-weight: bold;
+                    }
+                """)
+
         self.lbl_file = QtWidgets.QLabel("파일 없음")
         self.lbl_file.setMinimumWidth(300)
         self.lbl_file.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -1364,15 +1824,35 @@ class MainWindow(QtWidgets.QMainWindow):
         second_layout.setContentsMargins(0, 0, 0, 0)
         second_layout.setSpacing(8)
 
-        # 요청 1: edt_query 왼쪽에 라벨 추가
         self.lbl_query_title = QtWidgets.QLabel("기본 검색어 :")
-        self.edt_query = QueryLineEdit()  # F5 단축키 지원
-        self.edt_query.setPlaceholderText("검색어를 입력하세요 (Long Click으로 즐겨찾기, F5로 검색)")
+
+        # 즐겨찾기 버튼(노란색) - edt_query 왼쪽
+        self.btn_query_fav = QtWidgets.QPushButton("★")
+        self.btn_query_fav.setToolTip("기본 검색어 즐겨찾기")
+        self.btn_query_fav.setFixedSize(26, 26)
+        self.btn_query_fav.setStyleSheet("""
+            QPushButton {
+                background-color: #FFD700;
+                color: black;
+                border: 1px solid #C0A000;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                border: 1px solid #FFAA00;
+            }
+        """)
+        self.btn_query_fav.clicked.connect(self.show_query_favorites)
+
+        self.edt_query = QueryLineEdit()
+        self.edt_query.setPlaceholderText("검색어를 입력하세요 (F5로 검색)")
         self.edt_query.returnPressed.connect(self.do_search)
-        self.edt_query.longClicked.connect(self.show_query_favorites)
-        self.edt_query.setStyleSheet("QLineEdit { background-color: lightyellow; }")
+        # Long Click 동작 제거 요청에 따라 연결 삭제
+        # self.edt_query.longClicked.connect(self.show_query_favorites)
+        self.edt_query.setStyleSheet("QLineEdit { background-color : lightyellow; }")
 
         second_layout.addWidget(self.lbl_query_title)
+        second_layout.addWidget(self.btn_query_fav)
         second_layout.addWidget(self.edt_query, 1)
 
         # 세 번째 줄
@@ -1408,13 +1888,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_search = QtWidgets.QPushButton("검색")
         self.btn_search.setStyleSheet("""
             QPushButton {
-                background-color: lightblue;
+                background-color: #16E2F5;
                 color: red;
                 font-weight: bold;
             }
         """)
 
-        # 요청 2: 검색/중지 사이에 previous/next lines 입력 추가 (QueryLineEdit)
         int_validator = QtGui.QIntValidator(0, 999999, self)
         self.edt_prev_lines = QueryLineEdit()
         self.edt_prev_lines.setValidator(int_validator)
@@ -1443,11 +1922,8 @@ class MainWindow(QtWidgets.QMainWindow):
         third_layout.addWidget(self.cmb_mode)
         third_layout.addWidget(self.chk_case)
         third_layout.addWidget(self.btn_search)
-
-        # 요청 2: 여기서 두 개의 QueryLineEdit 추가 (검색과 중지 사이)
         third_layout.addWidget(self.edt_prev_lines)
         third_layout.addWidget(self.edt_next_lines)
-
         third_layout.addWidget(self.btn_stop)
         third_layout.addWidget(self.prog)
         third_layout.addStretch()
@@ -1459,10 +1935,31 @@ class MainWindow(QtWidgets.QMainWindow):
         fourth_layout.setSpacing(8)
 
         fourth_layout.addWidget(QtWidgets.QLabel("검색결과에서 검색(정규표현식):"))
+
+        # 즐겨찾기 버튼(노란색) - edt_result_search 왼쪽
+        self.btn_result_search_fav = QtWidgets.QPushButton("★")
+        self.btn_result_search_fav.setToolTip("검색결과에서 검색 즐겨찾기")
+        self.btn_result_search_fav.setFixedSize(26, 26)
+        self.btn_result_search_fav.setStyleSheet("""
+            QPushButton {
+                background-color: #FFD700;
+                color: black;
+                border: 1px solid #C0A000;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                border: 1px solid #FFAA00;
+            }
+        """)
+        self.btn_result_search_fav.clicked.connect(self.show_result_search_favorites)
+
         self.edt_result_search = LongClickLineEdit()
-        self.edt_result_search.setPlaceholderText("검색 결과 내에서 검색... (Long Click으로 즐겨찾기)")
+        self.edt_result_search.setPlaceholderText("검색 결과 내에서 검색...")
         self.edt_result_search.returnPressed.connect(self.search_in_results_next)
-        self.edt_result_search.longClicked.connect(self.show_result_search_favorites)
+        # Long Click 동작 제거 요청에 따라 연결 삭제
+        # self.edt_result_search.longClicked.connect(self.show_result_search_favorites)
+        self.edt_result_search.setStyleSheet("QLineEdit { background-color: #F0FFFF; }")
 
         self.btn_result_search_prev = QtWidgets.QPushButton("이전 (F3)")
         self.btn_result_search_next = QtWidgets.QPushButton("다음 (F4)")
@@ -1471,6 +1968,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.chk_recursive_search = QtWidgets.QCheckBox("되돌이 검색")
         self.chk_recursive_search.setChecked(False)
 
+        fourth_layout.addWidget(self.btn_result_search_fav)
         fourth_layout.addWidget(self.edt_result_search, 1)
         fourth_layout.addWidget(self.btn_result_search_prev)
         fourth_layout.addWidget(self.btn_result_search_next)
@@ -1485,9 +1983,30 @@ class MainWindow(QtWidgets.QMainWindow):
         fifth_layout.setSpacing(8)
 
         fifth_layout.addWidget(QtWidgets.QLabel("Highlight Color 설정:"))
-        self.edt_color_keywords = ColorKeywordsLineEdit()  # F5 단축키 지원
-        self.edt_color_keywords.setPlaceholderText("예: activity|window|package (Long Click으로 즐겨찾기, F5로 설정)")
-        self.edt_color_keywords.longClicked.connect(self.show_color_keywords_favorites)
+
+        # 즐겨찾기 버튼(노란색) - edt_color_keywords 왼쪽
+        self.btn_color_keywords_fav = QtWidgets.QPushButton("★")
+        self.btn_color_keywords_fav.setToolTip("Highlight Color 즐겨찾기")
+        self.btn_color_keywords_fav.setFixedSize(26, 26)
+        self.btn_color_keywords_fav.setStyleSheet("""
+            QPushButton {
+                background-color: #FFD700;
+                color: black;
+                border: 1px solid #C0A000;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                border: 1px solid #FFAA00;
+            }
+        """)
+        self.btn_color_keywords_fav.clicked.connect(self.show_color_keywords_favorites)
+
+        self.edt_color_keywords = ColorKeywordsLineEdit()
+        self.edt_color_keywords.setPlaceholderText("예: activity|window|package (F5로 설정)")
+        # Long Click 동작 제거 요청에 따라 연결 삭제
+        # self.edt_color_keywords.longClicked.connect(self.show_color_keywords_favorites)
+        self.edt_color_keywords.setStyleSheet("QLineEdit { background-color: #C9DFEC; }")
 
         self.btn_apply_colors = QtWidgets.QPushButton("설정")
         self.btn_apply_colors.clicked.connect(self.on_color_settings_clicked)
@@ -1495,6 +2014,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_clear_colors = QtWidgets.QPushButton("Clear")
         self.btn_clear_colors.clicked.connect(self.on_color_clear_clicked)
 
+        fifth_layout.addWidget(self.btn_color_keywords_fav)
         fifth_layout.addWidget(self.edt_color_keywords, 1)
         fifth_layout.addWidget(self.btn_apply_colors)
         fifth_layout.addWidget(self.btn_clear_colors)
@@ -1526,32 +2046,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.lineView.textChanged.connect(self.on_text_changed)
         self.lineView.fileDropped.connect(self.load_dropped_file)
 
-        self.tblResults = QtWidgets.QTableView()
+        # DragTableView로 변경 (Long Press 드래그 지원)
+        self.tblResults = DragTableView()
         self.tblResults.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.tblResults.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.tblResults.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.tblResults.verticalHeader().setVisible(False)
         self.tblResults.setAlternatingRowColors(True)
-        # 멀티라인 스니펫 표시 위해 wordWrap 활성화
-        self.tblResults.setWordWrap(True)
+        # 자동 줄바꿈 비활성화: 한 줄은 한 줄로 표시
+        self.tblResults.setWordWrap(False)
+        # 텍스트 생략 없음(가로 스크롤로 확인)
+        self.tblResults.setTextElideMode(Qt.ElideNone)
+        # 검색결과(1열)에 NoWrapDelegate 적용
+        self.tblResults.setItemDelegateForColumn(1, NoWrapDelegate(self.tblResults))
         self.tblResults.setShowGrid(False)
-
-        self.tblResults.setStyleSheet("""
-            QTableView {
-                color: black;
-                background-color: white;
-                alternate-background-color: #F0F0F0;
-                selection-background-color: #0078D7;
-                selection-color: white;
-                gridline-color: #D0D0D0;
-            }
-            QHeaderView::section {
-                background-color: #E0E0E0;
-                padding: 4px;
-                border: 1px solid #C0C0C0;
-                font-weight: bold;
-            }
-        """)
 
         self.resultsModel = ResultsModel()
         self.tblResults.setModel(self.resultsModel)
@@ -1579,7 +2087,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_result_search_prev.clicked.connect(self.search_in_results_prev)
         self.btn_result_search_next.clicked.connect(self.search_in_results_next)
 
-        # F2/Shift+F2 단축키 (윈도우 전역에서 동작, 먼저 tblResults에 포커스를 주고 이동)
+        # F2/Shift+F2 단축키
         self.sc_next_mark = QtGui.QShortcut(QtGui.QKeySequence("F2"), self)
         self.sc_next_mark.setContext(Qt.WindowShortcut)
         self.sc_next_mark.activated.connect(lambda: self.handle_marked_row_shortcut(next=True))
@@ -1589,6 +2097,56 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sc_prev_mark.activated.connect(lambda: self.handle_marked_row_shortcut(next=False))
 
         self.on_mode_changed(1)
+
+    # ---------------- 유틸: 선택문자열을 지정 LineEdit에 추가 ----------------
+    def append_text_to_lineedit(self, lineedit: QtWidgets.QLineEdit, text: str):
+        """
+        - 대상 LineEdit에 현재 문자열이 없으면 text로 교체
+        - 문자열이 있고, 끝 문자가 '|'이면 그대로 text 이어붙임
+        - 문자열이 있고, 끝 문자가 '|'가 아니면 '|' + text 이어붙임
+        """
+        current = lineedit.text()
+        if not current:
+            lineedit.setText(text)
+        else:
+            if current.endswith('|'):
+                lineedit.setText(current + text)
+            else:
+                lineedit.setText(current + '|' + text)
+
+    # ---------------- 라인 복사 기능 추가 ----------------
+    def copy_lines_between(self, line1: int, line2: int):
+        """두 라인 번호 사이의 내용을 클립보드에 복사"""
+        if line1 == line2:
+            QtWidgets.QMessageBox.information(self, "안내", "같은 라인입니다.")
+            return
+
+        # 순서 정렬 (작은 번호가 start, 큰 번호가 end)
+        start_line = min(line1, line2)
+        end_line = max(line1, line2)
+
+        # 텍스트 가져오기
+        content = self.lineView.toPlainText()
+        lines = content.split('\n')
+
+        # 라인 번호는 1-based이므로 인덱스는 0-based로 변환
+        # start_line부터 end_line까지 포함 (양쪽 끝 포함)
+        if start_line < 1 or end_line > len(lines):
+            QtWidgets.QMessageBox.warning(self, "경고", "라인 번호가 범위를 벗어났습니다.")
+            return
+
+        # 사이의 내용 추출 (start_line과 end_line 포함)
+        selected_lines = lines[start_line - 1:end_line]
+        selected_text = '\n'.join(selected_lines)
+
+        # 클립보드에 복사
+        clipboard = QtWidgets.QApplication.clipboard()
+        clipboard.setText(selected_text)
+
+        self.status.showMessage(
+            f"라인 {start_line}~{end_line} 복사됨 ({len(selected_lines)}줄)",
+            3000
+        )
 
     # ---------------- 마킹 관련 메서드 추가 ----------------
     def handle_marked_row_shortcut(self, next: bool):
@@ -1631,7 +2189,6 @@ class MainWindow(QtWidgets.QMainWindow):
             return
 
         current_row = self.tblResults.currentIndex().row()
-        # 선택이 없을 때는 마지막 마킹으로 이동
         if current_row is None or current_row < 0:
             prev_row = max(self.resultsModel.marked_rows) if self.resultsModel.marked_rows else -1
         else:
@@ -1645,118 +2202,25 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.status.showMessage("이전 마킹된 항목이 없습니다", 2000)
 
-    # ---------------- 즐겨찾기 관련 ----------------
+    # ---------------- 즐겨찾기 관련 (폴더 구조) ----------------
     def show_query_favorites(self):
-        """edt_query 즐겨찾기 - Long Click시 입력 다이얼로그 먼저 표시"""
+        """기본 검색어 즐겨찾기 - 폴더 구조"""
         current_value = self.edt_query.text()
-
-        # 1. 입력 다이얼로그 표시
-        add_dialog = FavoriteAddDialog(current_value, self)
-        add_result = add_dialog.exec()
-
-        # 2. Save 선택시 즐겨찾기에 추가
-        if add_result == QtWidgets.QDialog.Accepted:
-            json_path = "./fav/edit_query.json"
-
-            # 즐겨찾기 로드
-            favorites = []
-            if os.path.exists(json_path):
-                try:
-                    with open(json_path, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        favorites = data.get('favorites', [])
-                except Exception as e:
-                    print(f"즐겨찾기 로드 실패: {e}")
-
-            # 새 항목 추가
-            favorites.append({'name': add_dialog.name, 'value': add_dialog.value})
-
-            # 저장
-            try:
-                os.makedirs(os.path.dirname(json_path), exist_ok=True)
-                with open(json_path, 'w', encoding='utf-8') as f:
-                    json.dump({'favorites': favorites}, f, ensure_ascii=False, indent=2)
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(self, "오류", f"저장 실패: {e}")
-
-        # 3. Save든 Cancel이든 즐겨찾기 목록 다이얼로그 표시
-        dialog = FavoriteDialog("검색어 즐겨찾기", "./fav/edit_query.json", current_value, self)
+        dialog = FavoriteDialog("기본 검색어 즐겨찾기", "./fav/edit_query.json", current_value, self)
         if dialog.exec() == QtWidgets.QDialog.Accepted and dialog.selected_value is not None:
             self.edt_query.setText(dialog.selected_value)
 
     def show_result_search_favorites(self):
-        """edt_result_search 즐겨찾기 - Long Click시 입력 다이얼로그 먼저 표시"""
+        """검색결과에서 검색 즐겨찾기 - 폴더 구조"""
         current_value = self.edt_result_search.text()
-
-        # 1. 입력 다이얼로그 표시
-        add_dialog = FavoriteAddDialog(current_value, self)
-        add_result = add_dialog.exec()
-
-        # 2. Save 선택시 즐겨찾기에 추가
-        if add_result == QtWidgets.QDialog.Accepted:
-            json_path = "./fav/edt_result_search.json"
-
-            # 즐겨찾기 로드
-            favorites = []
-            if os.path.exists(json_path):
-                try:
-                    with open(json_path, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        favorites = data.get('favorites', [])
-                except Exception as e:
-                    print(f"즐겨찾기 로드 실패: {e}")
-
-            # 새 항목 추가
-            favorites.append({'name': add_dialog.name, 'value': add_dialog.value})
-
-            # 저장
-            try:
-                os.makedirs(os.path.dirname(json_path), exist_ok=True)
-                with open(json_path, 'w', encoding='utf-8') as f:
-                    json.dump({'favorites': favorites}, f, ensure_ascii=False, indent=2)
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(self, "오류", f"저장 실패: {e}")
-
-        # 3. Save든 Cancel이든 즐겨찾기 목록 다이얼로그 표시
-        dialog = FavoriteDialog("검색결과 검색 즐겨찾기", "./fav/edt_result_search.json", current_value, self)
+        dialog = FavoriteDialog("검색결과에서 검색 즐겨찾기", "./fav/edt_result_search.json", current_value, self)
         if dialog.exec() == QtWidgets.QDialog.Accepted and dialog.selected_value is not None:
             self.edt_result_search.setText(dialog.selected_value)
 
     def show_color_keywords_favorites(self):
-        """edt_color_keywords 즐겨찾기 - Long Click시 입력 다이얼로그 먼저 표시"""
+        """Color 키워드 즐겨찾기 - 폴더 구조"""
         current_value = self.edt_color_keywords.text()
-
-        # 1. 입력 다이얼로그 표시
-        add_dialog = FavoriteAddDialog(current_value, self)
-        add_result = add_dialog.exec()
-
-        # 2. Save 선택시 즐겨찾기에 추가
-        if add_result == QtWidgets.QDialog.Accepted:
-            json_path = "./fav/edt_color_keywords.json"
-
-            # 즐겨찾기 로드
-            favorites = []
-            if os.path.exists(json_path):
-                try:
-                    with open(json_path, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        favorites = data.get('favorites', [])
-                except Exception as e:
-                    print(f"즐겨찾기 로드 실패: {e}")
-
-            # 새 항목 추가
-            favorites.append({'name': add_dialog.name, 'value': add_dialog.value})
-
-            # 저장
-            try:
-                os.makedirs(os.path.dirname(json_path), exist_ok=True)
-                with open(json_path, 'w', encoding='utf-8') as f:
-                    json.dump({'favorites': favorites}, f, ensure_ascii=False, indent=2)
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(self, "오류", f"저장 실패: {e}")
-
-        # 3. Save든 Cancel이든 즐겨찾기 목록 다이얼로그 표시
-        dialog = FavoriteDialog("Color 키워드 즐겨찾기", "./fav/edt_color_keywords.json", current_value, self)
+        dialog = FavoriteDialog("Highlight Color 즐겨찾기", "./fav/edt_color_keywords.json", current_value, self)
         if dialog.exec() == QtWidgets.QDialog.Accepted and dialog.selected_value is not None:
             self.edt_color_keywords.setText(dialog.selected_value)
 
@@ -1769,36 +2233,28 @@ class MainWindow(QtWidgets.QMainWindow):
 
         config_name = dialog.config_name
 
-        # 설정 데이터 구성 (file_path, bookmarks 저장하지 않음)
         config = {
-            # 'file_path': self.current_file_path,  # 저장 제외
             'query': self.edt_query.text(),
             'search_mode': self.cmb_mode.currentText(),
             'case_sensitive': self.chk_case.isChecked(),
             'result_search': self.edt_result_search.text(),
             'color_keywords': self.edt_color_keywords.text(),
             'recursive_search': self.chk_recursive_search.isChecked(),
-            # 'bookmarks': list(self.lineView.bookmarks),  # 저장 제외
-            'marked_rows': list(self.resultsModel.marked_rows),  # 마킹된 row는 저장 유지
+            'marked_rows': list(self.resultsModel.marked_rows),
         }
 
-        # 파일명 생성
         config_dir = "./config"
         os.makedirs(config_dir, exist_ok=True)
 
-        # 기존 파일 개수로 index 계산
         existing_files = [f for f in os.listdir(config_dir) if f.endswith('.json')]
         index = len(existing_files) + 1
 
-        # 날짜_시간
         now = datetime.now()
         date_str = now.strftime("%Y%m%d_%H%M%S")
 
-        # 파일명: index_날짜_시간_이름.json
         filename = f"{index:04d}_{date_str}_{config_name}.json"
         filepath = os.path.join(config_dir, filename)
 
-        # 저장
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(config, f, ensure_ascii=False, indent=2)
@@ -1820,7 +2276,6 @@ class MainWindow(QtWidgets.QMainWindow):
             with open(filepath, 'r', encoding='utf-8') as f:
                 config = json.load(f)
 
-            # 설정 적용
             self.edt_query.setText(config.get('query', ''))
 
             search_mode = config.get('search_mode', '정규식')
@@ -1833,11 +2288,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.edt_color_keywords.setText(config.get('color_keywords', ''))
             self.chk_recursive_search.setChecked(config.get('recursive_search', False))
 
-            # 마킹된 row 복원만 적용
             marked_rows = config.get('marked_rows', [])
             self.resultsModel.marked_rows = set(marked_rows)
             if marked_rows:
-                # 테이블 업데이트
                 self.resultsModel.dataChanged.emit(
                     self.resultsModel.index(0, 0),
                     self.resultsModel.index(self.resultsModel.rowCount() - 1,
@@ -1941,6 +2394,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.prog.setValue(0)
 
         self.result_search_query = ""
+        the_count = len(content.split(chr(10)))
         self.result_search_index = -1
         self.result_search_matches = []
         self.lbl_result_search_status.setText("")
@@ -1966,13 +2420,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.lbl_result_search_status.setText("")
         self.setWindowTitle(f"Dumpstate Searcher - {gCurVerInfo}")
 
-    # --------- 컨텍스트(prev/next) 유틸 ---------
     def get_context_counts(self) -> Tuple[int, int]:
         def to_int(s: str) -> int:
             try:
                 return max(0, int(s))
             except Exception:
                 return 0
+
         return to_int(self.edt_prev_lines.text()), to_int(self.edt_next_lines.text())
 
     def apply_context_snippets_to_current_results(self):
@@ -1992,11 +2446,9 @@ class MainWindow(QtWidgets.QMainWindow):
         """컨텍스트 값 변경 후 테이블 뷰 갱신"""
         if self.resultsModel.rowCount() == 0:
             return
-        # 1열(검색결과) 전부 갱신
         top_left = self.resultsModel.index(0, 1)
         bottom_right = self.resultsModel.index(self.resultsModel.rowCount() - 1, 1)
         self.resultsModel.dataChanged.emit(top_left, bottom_right)
-        # 멀티라인 높이 반영
         self.tblResults.resizeRowsToContents()
 
     def on_context_lines_changed(self):
@@ -2054,13 +2506,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stop_search()
         self.current_results = results
 
-        # prev/next 컨텍스트를 snippet에 반영하여 결과 세팅
         self.apply_context_snippets_to_current_results()
         self.resultsModel.set_results(results)
 
-        self.tblResults.resizeColumnToContents(0)
-        self.tblResults.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
-        self.tblResults.resizeRowsToContents()  # 멀티라인 반영
+        # 헤더 리사이즈 모드: Stretch -> ResizeToContents (가로 스크롤 가능)
+        header = self.tblResults.horizontalHeader()
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
+
+        self.tblResults.resizeRowsToContents()
 
         self.result_search_query = ""
         self.result_search_index = -1
@@ -2119,7 +2573,6 @@ class MainWindow(QtWidgets.QMainWindow):
                         selection = QtWidgets.QTextEdit.ExtraSelection()
                         selection.format.setBackground(QtGui.QColor(102, 255, 255))
 
-                        # 새로운 QTextCursor를 매 selection마다 생성하여 참조 공유로 인한 오동작 방지
                         cursor = QtGui.QTextCursor(self.lineView.document())
                         cursor.setPosition(line_start_pos + start)
                         cursor.setPosition(line_start_pos + end, QtGui.QTextCursor.KeepAnchor)
@@ -2173,13 +2626,11 @@ class MainWindow(QtWidgets.QMainWindow):
             content = self.lineView.toPlainText()
             for keyword, color in self.color_keywords:
                 try:
-                    # 키워드는 정규식이 아닌 '문자 그대로' 매칭하도록 escape 처리
                     pattern = re.compile(re.escape(keyword), re.IGNORECASE)
                     for match in pattern.finditer(content):
                         selection = QtWidgets.QTextEdit.ExtraSelection()
                         selection.format.setBackground(color)
 
-                        # 매 번 새로운 QTextCursor를 사용하여 선택 범위 지정 (버그 방지)
                         cursor = QtGui.QTextCursor(self.lineView.document())
                         cursor.setPosition(match.start())
                         cursor.setPosition(match.end(), QtGui.QTextCursor.KeepAnchor)
@@ -2307,8 +2758,6 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
     def keyPressEvent(self, event):
-        # F3/F4 처리 (결과 내 검색). F2/Shift+F2는 QShortcut에서 처리.
-        # lineView에 focus가 있고 검색 다이얼로그가 열려있으면 lineView에서 처리
         if self.lineView.hasFocus() and self.lineView.search_dialog and self.lineView.search_dialog.isVisible():
             return
 
