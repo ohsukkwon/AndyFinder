@@ -31,21 +31,28 @@ VER_DESC__ver_1_251001_0140 = '''
 13. tblResults LineNumber를 lineView LineNumber로 Drag&Drop하여 범위 복사 기능 추가.
 14. 즐겨찾기 Category(폴더 구조) 지원: 세 가지 즐겨찾기(기본 검색어/결과내 검색/Color 키워드)에 폴더 생성/이동/선택 기능 추가.
 '''
-
 VER_INFO__ver_1_251001_0927 = "ver_1_251001_0927"
 VER_DESC__ver_1_251001_0927 = '''
 1. 즐겨찾기 Add 입력방식 개선 : 문자열이 있는 경우 값에 표시하고, 이름을 입력받도록 개선
 '''
+VER_INFO__ver_1_251001_1300 = "ver_1_251001_1300"
+VER_DESC__ver_1_251001_1300 = '''
+- 파일 메뉴에 "All data clear" 메뉴 추가: lineView, tblResults, lbl_status 등 로드된 파일 관련 정보를 초기화합니다.
+- lineView에 포커스가 있을 때 Ctrl + Mouse Wheel로 글꼴 크기 조절 시, 라인 번호 영역(LineNumberArea)도 동일하게 폰트 크기가 연동되도록 수정:
+  - CodeEditor.setFont을 오버라이드하여 에디터와 라인 번호 영역의 폰트를 동기화.
+  - zoomIn/zoomOut에서도 LineNumberArea 폰트를 동기화하고, 너비를 재계산하도록 처리.
+  - wheelEvent는 lineView에 포커스가 있고 Ctrl이 눌린 경우에만 확대/축소 수행.
+'''
 
 # # # # # # # # # # # # # # # # Config # # # # # # # # # # # # # # # # # #
-gCurVerInfo = VER_INFO__ver_1_251001_0140
-gCurVerDesc = VER_DESC__ver_1_251001_0140
-# # # # # # # # # # # # # # # # # # # # # # # # # #
+gCurVerInfo = VER_INFO__ver_1_251001_1300
+gCurVerDesc = VER_DESC__ver_1_251001_1300
+# # # # # # # # # # # # # # # # # # # # # # # # #
 
 
 # ------------------------------ Global 변수 ------------------------------
 g_font_face = 'Arial'
-g_font_size = 9
+g_font_size = 8
 g_icon_name = 'app.png'
 
 # ------------------------------ 데이터 구조 ------------------------------
@@ -874,6 +881,8 @@ class LineNumberArea(QtWidgets.QWidget):
 
 
 class CodeEditor(QtWidgets.QPlainTextEdit):
+    fontSizeChanged = Signal(int)
+
     def __init__(self):
         super().__init__()
         self.lineNumberArea = LineNumberArea(self)
@@ -897,6 +906,20 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
         self.cursorPositionChanged.connect(self.highlightCurrentLine)
         self.updateLineNumberAreaWidth(0)
         self.highlightCurrentLine()
+
+    # 폰트 설정 오버라이드: 에디터/라인넘버 동기화
+    def setFont(self, font: QtGui.QFont):
+        super().setFont(font)
+        try:
+            # 라인넘버 영역 폰트도 동일하게 적용
+            if hasattr(self, 'lineNumberArea') and self.lineNumberArea:
+                self.lineNumberArea.setFont(font)
+            # 라인넘버 영역 폭 재계산 및 리프레시
+            self.updateLineNumberAreaWidth(0)
+            if hasattr(self, 'lineNumberArea') and self.lineNumberArea:
+                self.lineNumberArea.update()
+        except Exception:
+            pass
 
     def toggle_bookmark(self, line_number):
         """북마크 토글 (1-based)"""
@@ -1016,7 +1039,8 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
         self.centerCursor()
 
     def wheelEvent(self, event):
-        if event.modifiers() == Qt.ControlModifier:
+        # lineView에 포커스가 있고 Ctrl이 눌린 경우만 확대/축소
+        if self.hasFocus() and (event.modifiers() & Qt.ControlModifier):
             delta = event.angleDelta().y()
             if delta > 0:
                 self.zoomIn()
@@ -1031,14 +1055,18 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
         size = font.pointSize()
         if size < 72:
             font.setPointSize(size + 1)
+            # 에디터/라인넘버 동시 적용
             self.setFont(font)
+            self.fontSizeChanged.emit(font.pointSize())
 
     def zoomOut(self):
         font = self.font()
         size = font.pointSize()
         if size > 6:
             font.setPointSize(size - 1)
+            # 에디터/라인넘버 동시 적용
             self.setFont(font)
+            self.fontSizeChanged.emit(font.pointSize())
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_F2:
@@ -1411,7 +1439,11 @@ class DragDropCodeEditor(CodeEditor):
 # ------------------------------ Drag 지원 TableView ------------------------------
 
 class DragTableView(QtWidgets.QTableView):
-    """드래그를 지원하는 TableView (Long Press + Move로 드래그 시작, 0번 컬럼(LineNumber) 전용)"""
+    """드래그를 지원하는 TableView (Long Press + Move로 드래그 시작, 0번 컬럼(LineNumber) 전용)
+       + 요청사항 반영: Ctrl+Wheel 폰트 확대/축소, Ctrl+C 복사, Ctrl+A 전체선택
+       + 요청사항 반영: Shift + 마우스 오른쪽 클릭으로도 범위 선택 가능
+    """
+    fontSizeChanged = Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1446,10 +1478,31 @@ class DragTableView(QtWidgets.QTableView):
         self._drag_pixmap_size = QtCore.QSize(100, 30)
 
     def mousePressEvent(self, event):
+        # Shift + Right Click 으로 범위 선택 지원
+        if event.button() == Qt.RightButton and (event.modifiers() & Qt.ShiftModifier):
+            idx = self.indexAt(event.pos())
+            if idx.isValid():
+                sel_model = self.selectionModel()
+                model = self.model()
+                if sel_model and model:
+                    anchor = sel_model.currentIndex()
+                    if not anchor.isValid():
+                        anchor = idx
+                    start_row = min(anchor.row(), idx.row())
+                    end_row = max(anchor.row(), idx.row())
+                    top_left = model.index(start_row, 0)
+                    bottom_right = model.index(end_row, model.columnCount() - 1)
+                    selection = QtCore.QItemSelection(top_left, bottom_right)
+                    # 기본 Shift-LeftClick처럼 ClearAndSelect + Rows 동작
+                    sel_model.select(selection, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows)
+                    sel_model.setCurrentIndex(idx, QtCore.QItemSelectionModel.NoUpdate)
+            event.accept()
+            return
+
         if event.button() == Qt.LeftButton:
             self._pressed = True
-            self._press_pos = event.pos()
-            self._press_index = self.indexAt(event.pos())
+            self._press_pos = event.position().toPoint()
+            self._press_index = self.indexAt(event.position().toPoint())
 
             # 선택은 기본 동작대로 수행
             super().mousePressEvent(event)
@@ -1465,7 +1518,7 @@ class DragTableView(QtWidgets.QTableView):
     def mouseMoveEvent(self, event):
         if self._pressed:
             # 이동 거리 확인해서 기준 넘으면 즉시 드래그 시작
-            if (event.pos() - self._press_pos).manhattanLength() >= QtWidgets.QApplication.startDragDistance():
+            if (event.position().toPoint() - self._press_pos).manhattanLength() >= QtWidgets.QApplication.startDragDistance():
                 self._press_timer.stop()
                 if self._press_index.isValid() and self._press_index.column() == 0:
                     self._start_drag(self._press_index)
@@ -1526,6 +1579,82 @@ class DragTableView(QtWidgets.QTableView):
         if not (index.isValid() and index.column() == 0):
             return
         self._start_drag(index)
+
+    # ---- Ctrl+Wheel로 폰트 크기 조절 ----
+    def wheelEvent(self, event: QtGui.QWheelEvent):
+        if self.hasFocus() and (event.modifiers() & Qt.ControlModifier):
+            delta = event.angleDelta().y()
+            if delta == 0:
+                # 일부 트랙패드 환경 고려
+                delta = event.pixelDelta().y()
+            if delta > 0:
+                self.zoomIn()
+            elif delta < 0:
+                self.zoomOut()
+            event.accept()
+            return
+        super().wheelEvent(event)
+
+    def zoomIn(self):
+        font = self.font()
+        size = font.pointSize()
+        if size < 72:
+            font.setPointSize(size + 1)
+            self.setFont(font)
+            self._refresh_layout_after_font_change()
+            self.fontSizeChanged.emit(font.pointSize())
+
+    def zoomOut(self):
+        font = self.font()
+        size = font.pointSize()
+        if size > 6:
+            font.setPointSize(size - 1)
+            self.setFont(font)
+            self._refresh_layout_after_font_change()
+            self.fontSizeChanged.emit(font.pointSize())
+
+    def _refresh_layout_after_font_change(self):
+        # 행 높이/열 너비 갱신
+        try:
+            self.resizeRowsToContents()
+            self.resizeColumnToContents(0)
+            self.resizeColumnToContents(1)
+        except Exception:
+            pass
+        self.viewport().update()
+
+    # ---- Ctrl+C 복사, Ctrl+A 전체 선택 ----
+    def keyPressEvent(self, event: QtGui.QKeyEvent):
+        if event.matches(QtGui.QKeySequence.Copy):
+            self.copy_selected_rows_to_clipboard()
+            event.accept()
+            return
+        if event.matches(QtGui.QKeySequence.SelectAll):
+            self.selectAll()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def copy_selected_rows_to_clipboard(self):
+        model = self.model()
+        sel_model = self.selectionModel()
+        if not model or not sel_model:
+            return
+        # 선택된 모든 인덱스에서 행 번호만 모아 정렬
+        rows = sorted({idx.row() for idx in sel_model.selectedIndexes()})
+        if not rows:
+            return
+
+        lines = []
+        for r in rows:
+            c0 = model.data(model.index(r, 0), Qt.DisplayRole)
+            c1 = model.data(model.index(r, 1), Qt.DisplayRole)
+            c0 = "" if c0 is None else str(c0)
+            c1 = "" if c1 is None else str(c1)
+            # 탭으로 컬럼 구분, 행은 줄바꿈
+            lines.append(f"{c0}\t{c1}")
+
+        QtWidgets.QApplication.clipboard().setText("\n".join(lines))
 
 
 # ------------------------------ NoWrapDelegate (tblResults 1열 전용) ------------------------------
@@ -1742,6 +1871,14 @@ class MainWindow(QtWidgets.QMainWindow):
         load_config_action.setShortcut('Ctrl+Shift+O')
         load_config_action.triggered.connect(self.load_config)
         file_menu.addAction(load_config_action)
+
+        file_menu.addSeparator()
+
+        # All data clear 추가
+        all_clear_action = QtGui.QAction('All data clear', self)
+        all_clear_action.setStatusTip('로드된 파일 및 관련 표시들을 초기화합니다')
+        all_clear_action.triggered.connect(self.all_data_clear)
+        file_menu.addAction(all_clear_action)
 
         file_menu.addSeparator()
 
@@ -2065,8 +2202,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # DragTableView로 변경 (Long Press 드래그 지원)
         self.tblResults = DragTableView()
+        self.tblResults.setFont(QtGui.QFont(g_font_face, g_font_size))  # 폰트 기본값 적용
         self.tblResults.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self.tblResults.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.tblResults.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)  # 다중 선택 허용
         self.tblResults.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.tblResults.verticalHeader().setVisible(False)
         self.tblResults.setAlternatingRowColors(True)
@@ -2088,7 +2226,26 @@ class MainWindow(QtWidgets.QMainWindow):
         splitter.setStretchFactor(1, 1)
 
         self.status = QtWidgets.QStatusBar()
+        # 좌측: lbl_status 추가
+        self.lbl_status = QtWidgets.QLabel("")
+        self.status.addWidget(self.lbl_status)  # 좌측 영역에 표시
         self.setStatusBar(self.status)
+
+        # 우측: 폰트 사이즈 라벨 두 개 추가
+        self.lable_lineView = QtWidgets.QLabel("")
+        self.lable_tblResults = QtWidgets.QLabel("")
+        self.lable_lineView.setStyleSheet("color: #404040;")
+        self.lable_tblResults.setStyleSheet("color: #404040;")
+        self.status.addPermanentWidget(self.lable_lineView)
+        self.status.addPermanentWidget(self.lable_tblResults)
+
+        # 초기 폰트 사이즈 표시
+        self.update_lineview_font_label(self.lineView.font().pointSize())
+        self.update_tbl_font_label(self.tblResults.font().pointSize())
+
+        # 폰트 변경 시 라벨 업데이트 연결
+        self.lineView.fontSizeChanged.connect(self.update_lineview_font_label)
+        self.tblResults.fontSizeChanged.connect(self.update_tbl_font_label)
 
         central = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(central)
@@ -2114,6 +2271,30 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sc_prev_mark.activated.connect(lambda: self.handle_marked_row_shortcut(next=False))
 
         self.on_mode_changed(1)
+
+    # ---------------- All data clear ----------------
+    def all_data_clear(self):
+        """로드된 파일 및 관련 표시를 모두 초기화"""
+        try:
+            # 검색 중이면 중지
+            self.stop_search()
+            # 현재 파일/결과/상태 초기화
+            self.close_current_file()
+            # 파일 라벨/상태/프로그레스/테이블 선택 초기화
+            self.lbl_file.setText("파일 없음")
+            self.lbl_status.setText("")
+            self.prog.setValue(0)
+            self.tblResults.clearSelection()
+            self.status.showMessage("All data cleared", 3000)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "오류", f"초기화 중 오류: {e}")
+
+    # ---------------- 우측 하단 폰트 라벨 업데이트 ----------------
+    def update_lineview_font_label(self, size: int):
+        self.lable_lineView.setText(f"lineView: {size}pt")
+
+    def update_tbl_font_label(self, size: int):
+        self.lable_tblResults.setText(f"tblResults: {size}pt")
 
     # ---------------- 유틸: 선택문자열을 지정 LineEdit에 추가 ----------------
     def append_text_to_lineedit(self, lineedit: QtWidgets.QLineEdit, text: str):
@@ -2588,6 +2769,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.result_search_index = -1
         self.result_search_matches = []
         self.lbl_result_search_status.setText("")
+
+        # 좌측 하단 라벨에 검색 결과 건수 표시
+        self.lbl_status.setText(f"검색 결과 : {len(results)}개")
 
         if results:
             self.current_result_index = 0

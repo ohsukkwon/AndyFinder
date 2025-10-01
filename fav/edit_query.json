@@ -1,9 +1,26 @@
 {
   "favorites": [
     {
-      "type": "item",
-      "name": "dumpstate구조2",
-      "value": "^(== dumpstate:|--------- beginning of|------ EVENT LOG |------ SYSTEM LOG |------ RADIO LOG |------ KERNEL LOG |------ |--------- |----------------------- |----- pid|Cmd line: |Build fingerprint:|== Android Framework Services|== Running Application|== Dropbox crashes|FRAMEWORK|------ DUMPSYS CRITICAL |------ DUMPSYS HIGH |\\*\\* MEMINFO|ACTIVITY MANAGER RUNNING PROCESSES |== dumpstate: done|DUMP OF SERVICE |Kernel: Linux version)"
+      "type": "folder",
+      "name": "dumpstate구조",
+      "children": [
+        {
+          "type": "item",
+          "name": "dumpstate구조",
+          "value": "^(== dumpstate:|--------- beginning of|------ EVENT LOG |------ SYSTEM LOG |------ RADIO LOG |------ KERNEL LOG |------ |--------- |----------------------- |----- pid|Cmd line: |Build fingerprint:|== Android Framework Services|== Running Application|== Dropbox crashes|FRAMEWORK|------ DUMPSYS CRITICAL |------ DUMPSYS HIGH |\\*\\* MEMINFO|ACTIVITY MANAGER RUNNING PROCESSES |== dumpstate: done|DUMP OF SERVICE |Kernel: Linux version)"
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "activity,keyguard,resume",
+      "children": [
+        {
+          "type": "item",
+          "name": "activity,keyguard,resume",
+          "value": "type=activity_resumed|type=keyguard_(shown|hidden){1}"
+        }
+      ]
     }
   ]
 }
