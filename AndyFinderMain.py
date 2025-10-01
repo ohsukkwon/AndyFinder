@@ -54,9 +54,18 @@ VER_DESC__ver_1_251001_1500 = '''
 - 저장 항목: query, search_mode, case_sensitive, result_search, color_keywords, recursive_search, prev_lines, next_lines, lineView_font_pt, tblResults_font_pt, always_on_top
 '''
 
+VER_INFO__ver_1_251001_1600 = "ver_1_251001_1600"
+VER_DESC__ver_1_251001_1600 = '''
+- prog(QProgressBar) 우측에 dropbox(QComboBox) 추가
+- dropbox에 "기본 검색어 즐겨찾기" 항목을 category 구분하여 모든 favorite 항목의 이름 표시
+- dropbox의 세부 항목 이름이 전체가 보이도록 충분한 width 설정
+- 이름 위에 마우스 over 시 값의 내용이 툴팁으로 표시
+- dropbox에서 항목 선택 후 F5 누르면 선택된 favorite 값을 edt_query에 로딩하고 포커스 설정
+'''
+
 # # # # # # # # # # # # # # # # Config # # # # # # # # # # # # # # # # # #
-gCurVerInfo = VER_INFO__ver_1_251001_1500
-gCurVerDesc = VER_DESC__ver_1_251001_1500
+gCurVerInfo = VER_INFO__ver_1_251001_1600
+gCurVerDesc = VER_DESC__ver_1_251001_1600
 # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
@@ -65,6 +74,7 @@ g_font_face = 'Arial'
 g_font_size = 8
 g_MIN_FONT_SIZE = 1
 g_icon_name = 'app.png'
+
 
 # ------------------------------ 데이터 구조 ------------------------------
 
@@ -140,6 +150,23 @@ class ColorKeywordsLineEdit(LongClickLineEdit):
             while parent:
                 if isinstance(parent, QtWidgets.QMainWindow):
                     parent.on_color_settings_clicked()
+                    event.accept()
+                    return
+                parent = parent.parent()
+        super().keyPressEvent(event)
+
+
+# ------------------------------ 커스텀 ComboBox (F5로 즐겨찾기 로딩) ------------------------------
+
+class FavoriteComboBox(QtWidgets.QComboBox):
+    """F5로 선택된 즐겨찾기를 로딩하는 ComboBox"""
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_F5:
+            parent = self.parent()
+            while parent:
+                if isinstance(parent, QtWidgets.QMainWindow):
+                    parent.load_favorite_from_combobox()
                     event.accept()
                     return
                 parent = parent.parent()
@@ -323,8 +350,8 @@ class FavoritesTree(QtWidgets.QTreeWidget):
 class FavoriteDialog(QtWidgets.QDialog):
     """즐겨찾기 관리 다이얼로그 (폴더 구조 + Drag & Drop 이동 지원)"""
 
-    ROLE_PATH = Qt.UserRole          # 내부 경로(인덱스 리스트)
-    ROLE_TYPE = Qt.UserRole + 1      # 'folder' or 'item'
+    ROLE_PATH = Qt.UserRole  # 내부 경로(인덱스 리스트)
+    ROLE_TYPE = Qt.UserRole + 1  # 'folder' or 'item'
 
     def __init__(self, title, json_path, current_value="", parent=None):
         super().__init__(parent)
@@ -504,6 +531,7 @@ class FavoriteDialog(QtWidgets.QDialog):
 
     def _rebuild_from_tree(self) -> List[dict]:
         """현재 트리 구조로 favorites 리스트를 재구성"""
+
         def build_from_item(item: QtWidgets.QTreeWidgetItem) -> dict:
             node_type = item.data(0, self.ROLE_TYPE)
             name = item.text(0)
@@ -603,12 +631,12 @@ class FavoriteDialog(QtWidgets.QDialog):
 
         if node.get('type') == 'folder':
             reply = QtWidgets.QMessageBox.question(
-                self, "확인", f"폴더 '{node.get('name','')}' 및 하위 모든 항목을 삭제하시겠습니까?",
+                self, "확인", f"폴더 '{node.get('name', '')}' 및 하위 모든 항목을 삭제하시겠습니까?",
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
             )
         else:
             reply = QtWidgets.QMessageBox.question(
-                self, "확인", f"'{node.get('name','')}' 항목을 삭제하시겠습니까?",
+                self, "확인", f"'{node.get('name', '')}' 항목을 삭제하시겠습니까?",
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
             )
 
@@ -1677,6 +1705,7 @@ class NoWrapDelegate(QtWidgets.QStyledItemDelegate):
     - 너비는 텍스트의 실제 픽셀 폭을 기준으로 계산하여, 헤더가 ResizeToContents일 때
       열 너비가 컨텐츠 폭만큼 넓어지고, 가로 스크롤로 전체를 확인할 수 있음
     """
+
     def sizeHint(self, option, index):
         value = index.data(Qt.DisplayRole)
         if not isinstance(value, str):
@@ -1808,7 +1837,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle(f"Dumpstate Finder - {gCurVerInfo}")
         self.resize(1300, 800)
 
-        icon_path =  self.resource_path(g_icon_name)
+        icon_path = self.resource_path(g_icon_name)
         if os.path.isfile(icon_path):
             self.setWindowIcon(QIcon(icon_path))
 
@@ -1976,7 +2005,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_open = QtWidgets.QPushButton("열기")
         self.btn_open.setStyleSheet("""
                     QPushButton {
-                        background-color: #8FB31D;
+                        background-color: #82CAFF;
                         color: black;
                         font-weight: bold;
                     }
@@ -2005,7 +2034,7 @@ class MainWindow(QtWidgets.QMainWindow):
             QPushButton {
                 background-color: #FFD700;
                 color: black;
-                border: 1px solid #C0A000;
+                border: 2px solid #FF0000;
                 border-radius: 4px;
                 font-weight: bold;
             }
@@ -2018,8 +2047,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.edt_query = QueryLineEdit()
         self.edt_query.setPlaceholderText("검색어를 입력하세요 (F5로 검색)")
         self.edt_query.returnPressed.connect(self.do_search)
-        # Long Click 동작 제거 요청에 따라 연결 삭제
-        # self.edt_query.longClicked.connect(self.show_query_favorites)
         self.edt_query.setStyleSheet("QLineEdit { background-color : lightyellow; }")
 
         second_layout.addWidget(self.lbl_query_title)
@@ -2089,6 +2116,28 @@ class MainWindow(QtWidgets.QMainWindow):
         self.prog.setRange(0, 100)
         self.prog.setValue(0)
 
+        # **새로 추가: 즐겨찾기 드롭박스 (prog 우측에 배치)**
+        self.cmb_favorites = FavoriteComboBox()
+        self.cmb_favorites.setMinimumWidth(800)  # 충분한 width 설정
+        self.cmb_favorites.setToolTip("기본 검색어 즐겨찾기 항목 선택 (F5로 로딩)")
+        self.cmb_favorites.currentIndexChanged.connect(self.on_favorite_combobox_changed)
+        self.cmb_favorites.setStyleSheet("""
+                    QComboBox {
+                        background-color: white;
+                        border: 1px solid black;
+                        padding: 4px;
+                        border-radius: 2px;
+                    }
+                    QComboBox:hover {
+                        border: 1px solid #0078D7;
+                      }
+                    QComboBox QAbstractItemView {
+                        background-color: white;
+                        selection-color: red;
+                    }   
+                """)
+
+
         third_layout.addWidget(QtWidgets.QLabel("검색모드:"))
         third_layout.addWidget(self.cmb_mode)
         third_layout.addWidget(self.chk_case)
@@ -2097,6 +2146,7 @@ class MainWindow(QtWidgets.QMainWindow):
         third_layout.addWidget(self.edt_next_lines)
         third_layout.addWidget(self.btn_stop)
         third_layout.addWidget(self.prog)
+        third_layout.addWidget(self.cmb_favorites)  # 추가
         third_layout.addStretch()
 
         # 네 번째 줄
@@ -2115,7 +2165,7 @@ class MainWindow(QtWidgets.QMainWindow):
             QPushButton {
                 background-color: #FFD700;
                 color: black;
-                border: 1px solid #C0A000;
+                border: 2px solid #FF0000;
                 border-radius: 4px;
                 font-weight: bold;
             }
@@ -2128,8 +2178,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.edt_result_search = LongClickLineEdit()
         self.edt_result_search.setPlaceholderText("검색 결과 내에서 검색...")
         self.edt_result_search.returnPressed.connect(self.search_in_results_next)
-        # Long Click 동작 제거 요청에 따라 연결 삭제
-        # self.edt_result_search.longClicked.connect(self.show_result_search_favorites)
         self.edt_result_search.setStyleSheet("QLineEdit { background-color: #F0FFFF; }")
 
         self.btn_result_search_prev = QtWidgets.QPushButton("이전 (F3)")
@@ -2163,7 +2211,7 @@ class MainWindow(QtWidgets.QMainWindow):
             QPushButton {
                 background-color: #FFD700;
                 color: black;
-                border: 1px solid #C0A000;
+                border: 2px solid #FF0000;
                 border-radius: 4px;
                 font-weight: bold;
             }
@@ -2175,8 +2223,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.edt_color_keywords = ColorKeywordsLineEdit()
         self.edt_color_keywords.setPlaceholderText("예: activity|window|package (F5로 설정)")
-        # Long Click 동작 제거 요청에 따라 연결 삭제
-        # self.edt_color_keywords.longClicked.connect(self.show_color_keywords_favorites)
         self.edt_color_keywords.setStyleSheet("QLineEdit { background-color: #C9DFEC; }")
 
         self.btn_apply_colors = QtWidgets.QPushButton("설정")
@@ -2288,6 +2334,61 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sc_prev_mark.activated.connect(lambda: self.handle_marked_row_shortcut(next=False))
 
         self.on_mode_changed(1)
+
+        # 즐겨찾기 콤보박스 초기 로딩
+        self.refresh_favorite_combobox()
+
+    # ---------------- 즐겨찾기 콤보박스 관련 메서드 ----------------
+    def refresh_favorite_combobox(self):
+        """즐겨찾기 JSON 파일을 읽어서 cmb_favorites를 category별로 구성"""
+        json_path = "./fav/edit_query.json"
+        favorites = self._load_favorites_from_file(json_path)
+
+        self.cmb_favorites.clear()
+        self.cmb_favorites.addItem("-- 즐겨찾기 선택 --", None)  # 플레이스홀더
+
+        self._populate_combobox_recursive(favorites, "")
+
+    def _populate_combobox_recursive(self, nodes: List[dict], prefix: str):
+        """재귀적으로 폴더 구조를 탐색하여 ComboBox에 항목 추가"""
+        for node in nodes:
+            if node.get('type') == 'folder':
+                folder_name = node.get('name', '')
+                new_prefix = f"{prefix}{folder_name}/" if prefix else f"{folder_name}/"
+                children = node.get('children', [])
+                self._populate_combobox_recursive(children, new_prefix)
+            else:  # item
+                name = node.get('name', '')
+                value = node.get('value', '')
+                display_text = f"{prefix}{name}" if prefix else name
+                self.cmb_favorites.addItem(display_text, value)
+                # 툴팁에 값 표시
+                index = self.cmb_favorites.count() - 1
+                self.cmb_favorites.setItemData(index, value, Qt.ToolTipRole)
+
+    def on_favorite_combobox_changed(self, index: int):
+        """콤보박스 선택 변경 시 툴팁 업데이트"""
+        if index > 0:  # 플레이스홀더가 아닌 경우
+            value = self.cmb_favorites.itemData(index)
+            if value:
+                self.cmb_favorites.setToolTip(f"값: {value}")
+        else:
+            self.cmb_favorites.setToolTip("기본 검색어 즐겨찾기 항목 선택 (F5로 로딩)")
+
+    def load_favorite_from_combobox(self):
+        """cmb_favorites에서 선택된 항목의 값을 edt_query에 로딩하고 포커스 설정"""
+        index = self.cmb_favorites.currentIndex()
+        if index <= 0:  # 플레이스홀더 선택
+            QtWidgets.QMessageBox.information(self, "안내", "즐겨찾기 항목을 선택하세요.")
+            return
+
+        value = self.cmb_favorites.itemData(index)
+        if value:
+            self.edt_query.setText(value)
+            self.edt_query.setFocus()
+            self.status.showMessage("즐겨찾기 항목이 로드되었습니다.", 2000)
+        else:
+            QtWidgets.QMessageBox.warning(self, "경고", "선택한 항목의 값이 없습니다.")
 
     # ---------------- All data clear ----------------
     def all_data_clear(self):
@@ -2465,11 +2566,18 @@ class MainWindow(QtWidgets.QMainWindow):
             favs = self._load_favorites_from_file(json_path)
             favs.append({'type': 'item', 'name': add_dlg.name, 'value': add_dlg.value})
             self._save_favorites_to_file(json_path, favs)
+            # 콤보박스 갱신 (기본 검색어 즐겨찾기인 경우만)
+            if json_path == "./fav/edit_query.json":
+                self.refresh_favorite_combobox()
 
         # 2) 즐겨찾기 다이얼로그 열기 (선택/관리)
         dialog = FavoriteDialog(title, json_path, base_value, self)
         if dialog.exec() == QtWidgets.QDialog.Accepted and dialog.selected_value is not None:
             target_lineedit.setText(dialog.selected_value)
+
+        # 다이얼로그 닫힌 후에도 콤보박스 갱신 (기본 검색어 즐겨찾기인 경우만)
+        if json_path == "./fav/edit_query.json":
+            self.refresh_favorite_combobox()
 
     # ---------------- 즐겨찾기 관련 (폴더 구조 + 요청사항 반영) ----------------
     def show_query_favorites(self):
