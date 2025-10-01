@@ -11,10 +11,11 @@ from typing import List, Tuple, Optional
 import chardet
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt, Signal, QObject, QModelIndex, QTimer
+from PySide6.QtGui import QIcon
 
 # ------------------------------ 버전 관리 ------------------------------
-VER_INFO__ver_1_251001_1040 = "ver_1_251001_1040"
-VER_DESC__ver_1_251001_1040 = '''
+VER_INFO__ver_1_251001_0140 = "ver_1_251001_0140"
+VER_DESC__ver_1_251001_0140 = '''
 1. Highlight Color 유지 기능 추가 - lineView의 mouse event에도 Color 하이라이트 유지.
 2. 프로그램 Title에 버전 정보 추가.
 3. 북마크 기능 추가 - Line Number 더블클릭으로 북마크 토글, F2/Shift+F2로 이동.
@@ -31,16 +32,21 @@ VER_DESC__ver_1_251001_1040 = '''
 14. 즐겨찾기 Category(폴더 구조) 지원: 세 가지 즐겨찾기(기본 검색어/결과내 검색/Color 키워드)에 폴더 생성/이동/선택 기능 추가.
 '''
 
+VER_INFO__ver_1_251001_0927 = "ver_1_251001_0927"
+VER_DESC__ver_1_251001_0927 = '''
+1. 즐겨찾기 Add 입력방식 개선 : 문자열이 있는 경우 값에 표시하고, 이름을 입력받도록 개선
+'''
+
 # # # # # # # # # # # # # # # # Config # # # # # # # # # # # # # # # # # #
-gCurVerInfo = VER_INFO__ver_1_251001_1040
-gCurVerDesc = VER_DESC__ver_1_251001_1040
+gCurVerInfo = VER_INFO__ver_1_251001_0140
+gCurVerDesc = VER_DESC__ver_1_251001_0140
 # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
 # ------------------------------ Global 변수 ------------------------------
 g_font_face = 'Arial'
 g_font_size = 9
-
+g_icon_name = 'app.png'
 
 # ------------------------------ 데이터 구조 ------------------------------
 
@@ -1650,10 +1656,21 @@ class ResultsModel(QtCore.QAbstractTableModel):
 # ------------------------------ 메인 윈도우 ------------------------------
 
 class MainWindow(QtWidgets.QMainWindow):
+    def resource_path(self, relpath):
+        try:
+            abspath = sys._MEIPASS
+        except Exception:
+            abspath = os.path.abspath(".")
+        return os.path.join(abspath, relpath)
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"Dumpstate Finder - {gCurVerInfo}")
         self.resize(1300, 800)
+
+        icon_path =  self.resource_path(g_icon_name)
+        if os.path.isfile(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
 
         # 상태
         self.content: str = ""
@@ -2202,27 +2219,78 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.status.showMessage("이전 마킹된 항목이 없습니다", 2000)
 
-    # ---------------- 즐겨찾기 관련 (폴더 구조) ----------------
-    def show_query_favorites(self):
-        """기본 검색어 즐겨찾기 - 폴더 구조"""
-        current_value = self.edt_query.text()
-        dialog = FavoriteDialog("기본 검색어 즐겨찾기", "./fav/edit_query.json", current_value, self)
+    # ---------------- 즐겨찾기 파일 로드/저장 헬퍼 ----------------
+    def _load_favorites_from_file(self, json_path: str) -> List[dict]:
+        """FavoriteDialog의 포맷과 동일한 구조로 favorites 로드 (폴더 구조 지원 + 구버전 자동 변환)"""
+        if os.path.exists(json_path):
+            try:
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    favs = data.get('favorites', [])
+                    needs_migrate = False
+                    for e in favs:
+                        if not isinstance(e, dict) or 'type' not in e:
+                            needs_migrate = True
+                            break
+                    if needs_migrate:
+                        migrated = []
+                        for e in favs:
+                            if isinstance(e, dict) and 'name' in e and 'value' in e:
+                                migrated.append({'type': 'item', 'name': e['name'], 'value': e.get('value', '')})
+                        return migrated
+                    return favs
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(self, "오류", f"즐겨찾기 로드 실패: {e}")
+                return []
+        return []
+
+    def _save_favorites_to_file(self, json_path: str, favorites: List[dict]):
+        """FavoriteDialog의 포맷으로 저장"""
+        try:
+            os.makedirs(os.path.dirname(json_path), exist_ok=True)
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump({'favorites': favorites}, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "오류", f"즐겨찾기 저장 실패: {e}")
+
+    def _open_favorites_with_quick_add(self, title: str, json_path: str, base_value: str,
+                                       target_lineedit: QtWidgets.QLineEdit):
+        """
+        - 요청사항: 버튼 클릭 시 해당 show_*_favorites API가 수행되되,
+          edt_query의 값을 '값'에 표시하고, '이름'을 입력 받는 UX 제공.
+        - UX: 먼저 FavoriteAddDialog를 띄워 이름 입력(값은 edt_query로 프리셋) -> 저장 시 루트에 즉시 추가 ->
+              즐겨찾기 관리 다이얼로그(FavoriteDialog) 표시 및 선택 가능
+        """
+        # 1) 빠른 추가 UX (이름 입력, 값은 edt_query)
+        add_dlg = FavoriteAddDialog(current_value=base_value, parent=self)
+        if add_dlg.exec() == QtWidgets.QDialog.Accepted:
+            favs = self._load_favorites_from_file(json_path)
+            favs.append({'type': 'item', 'name': add_dlg.name, 'value': add_dlg.value})
+            self._save_favorites_to_file(json_path, favs)
+
+        # 2) 즐겨찾기 다이얼로그 열기 (선택/관리)
+        dialog = FavoriteDialog(title, json_path, base_value, self)
         if dialog.exec() == QtWidgets.QDialog.Accepted and dialog.selected_value is not None:
-            self.edt_query.setText(dialog.selected_value)
+            target_lineedit.setText(dialog.selected_value)
+
+    # ---------------- 즐겨찾기 관련 (폴더 구조 + 요청사항 반영) ----------------
+    def show_query_favorites(self):
+        """기본 검색어 즐겨찾기 - 요청사항: edt_query 값을 '값'에 표시하고, '이름' 입력 UX 제공"""
+        base_value = self.edt_query.text()
+        json_path = "./fav/edit_query.json"
+        self._open_favorites_with_quick_add("기본 검색어 즐겨찾기", json_path, base_value, self.edt_query)
 
     def show_result_search_favorites(self):
-        """검색결과에서 검색 즐겨찾기 - 폴더 구조"""
-        current_value = self.edt_result_search.text()
-        dialog = FavoriteDialog("검색결과에서 검색 즐겨찾기", "./fav/edt_result_search.json", current_value, self)
-        if dialog.exec() == QtWidgets.QDialog.Accepted and dialog.selected_value is not None:
-            self.edt_result_search.setText(dialog.selected_value)
+        """검색결과에서 검색 즐겨찾기 - 요청사항: edt_query 값을 '값'에 표시하고, '이름' 입력 UX 제공"""
+        base_value = self.edt_query.text()  # 요청사항에 따라 edt_query의 값을 사용
+        json_path = "./fav/edt_result_search.json"
+        self._open_favorites_with_quick_add("검색결과에서 검색 즐겨찾기", json_path, base_value, self.edt_result_search)
 
     def show_color_keywords_favorites(self):
-        """Color 키워드 즐겨찾기 - 폴더 구조"""
-        current_value = self.edt_color_keywords.text()
-        dialog = FavoriteDialog("Highlight Color 즐겨찾기", "./fav/edt_color_keywords.json", current_value, self)
-        if dialog.exec() == QtWidgets.QDialog.Accepted and dialog.selected_value is not None:
-            self.edt_color_keywords.setText(dialog.selected_value)
+        """Color 키워드 즐겨찾기 - 요청사항: edt_query 값을 '값'에 표시하고, '이름' 입력 UX 제공"""
+        base_value = self.edt_query.text()  # 요청사항에 따라 edt_query의 값을 사용
+        json_path = "./fav/edt_color_keywords.json"
+        self._open_favorites_with_quick_add("Highlight Color 즐겨찾기", json_path, base_value, self.edt_color_keywords)
 
     # ---------------- 설정 저장/불러오기 ----------------
     def save_config(self):
