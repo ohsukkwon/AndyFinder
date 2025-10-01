@@ -2409,10 +2409,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # ---------------- 우측 하단 폰트 라벨 업데이트 ----------------
     def update_lineview_font_label(self, size: int):
-        self.lable_lineView.setText(f"lineView: {size}pt")
+        self.lable_lineView.setText(f"상단창: {size}pt")
 
     def update_tbl_font_label(self, size: int):
-        self.lable_tblResults.setText(f"tblResults: {size}pt")
+        self.lable_tblResults.setText(f"하단창: {size}pt")
 
     # ---------------- 유틸: 선택문자열을 지정 LineEdit에 추가 ----------------
     def append_text_to_lineedit(self, lineedit: QtWidgets.QLineEdit, text: str):
