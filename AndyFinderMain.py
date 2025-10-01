@@ -43,16 +43,27 @@ VER_DESC__ver_1_251001_1300 = '''
   - zoomIn/zoomOut에서도 LineNumberArea 폰트를 동기화하고, 너비를 재계산하도록 처리.
   - wheelEvent는 lineView에 포커스가 있고 Ctrl이 눌린 경우에만 확대/축소 수행.
 '''
+VER_INFO__ver_1_251001_1500 = "ver_1_251001_1500"
+VER_DESC__ver_1_251001_1500 = '''
+- 저장 경로: ./config/latest_config.json
+- 저장/로드 대상: 각종 설정값(UI 상태)만 저장하며, 로드된 파일 관련 정보는 저장하지 않습니다.
+변경 요약:
+- MainWindow에 latest_config 관련 메서드 추가: latest_config_file_path, build_latest_config, apply_latest_config, save_latest_config, load_latest_config
+- 프로그램 시작 시 load_latest_config() 호출
+- 종료 시 closeEvent에서 save_latest_config() 호출 (파일 저장 여부와 무관하게 종료 확정 시 항상 저장)
+- 저장 항목: query, search_mode, case_sensitive, result_search, color_keywords, recursive_search, prev_lines, next_lines, lineView_font_pt, tblResults_font_pt, always_on_top
+'''
 
 # # # # # # # # # # # # # # # # Config # # # # # # # # # # # # # # # # # #
-gCurVerInfo = VER_INFO__ver_1_251001_1300
-gCurVerDesc = VER_DESC__ver_1_251001_1300
+gCurVerInfo = VER_INFO__ver_1_251001_1500
+gCurVerDesc = VER_DESC__ver_1_251001_1500
 # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
 # ------------------------------ Global 변수 ------------------------------
 g_font_face = 'Arial'
 g_font_size = 8
+g_MIN_FONT_SIZE = 1
 g_icon_name = 'app.png'
 
 # ------------------------------ 데이터 구조 ------------------------------
@@ -1062,7 +1073,7 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
     def zoomOut(self):
         font = self.font()
         size = font.pointSize()
-        if size > 6:
+        if size > g_MIN_FONT_SIZE:
             font.setPointSize(size - 1)
             # 에디터/라인넘버 동시 적용
             self.setFont(font)
@@ -1607,7 +1618,7 @@ class DragTableView(QtWidgets.QTableView):
     def zoomOut(self):
         font = self.font()
         size = font.pointSize()
-        if size > 6:
+        if size > g_MIN_FONT_SIZE:
             font.setPointSize(size - 1)
             self.setFont(font)
             self._refresh_layout_after_font_change()
@@ -1842,6 +1853,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._build_ui()
         self._create_menus()
+
+        # 시작 시 최신 설정 로드
+        try:
+            self.load_latest_config()
+        except Exception:
+            pass
 
     def _create_menus(self):
         menubar = self.menuBar()
@@ -2552,6 +2569,106 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "오류", f"설정 불러오기 실패: {e}")
 
+    # ---------------- 최신 설정(자동 저장/로드) ----------------
+    def latest_config_file_path(self) -> str:
+        return os.path.join(".", "config", "latest_config.json")
+
+    def build_latest_config(self) -> dict:
+        """파일 관련 정보는 저장하지 않고, UI 설정값만 저장"""
+        cfg = {
+            'query': self.edt_query.text(),
+            'search_mode': self.cmb_mode.currentText(),
+            'case_sensitive': self.chk_case.isChecked(),
+            'result_search': self.edt_result_search.text(),
+            'color_keywords': self.edt_color_keywords.text(),
+            'recursive_search': self.chk_recursive_search.isChecked(),
+            'prev_lines': self.edt_prev_lines.text(),
+            'next_lines': self.edt_next_lines.text(),
+            'lineView_font_pt': self.lineView.font().pointSize(),
+            'tblResults_font_pt': self.tblResults.font().pointSize(),
+            'always_on_top': self.always_on_top_action.isChecked(),
+        }
+        return cfg
+
+    def apply_latest_config(self, cfg: dict):
+        """저장된 설정 적용 (파일 관련 내용 없음)"""
+        try:
+            # 검색 모드 먼저 적용
+            search_mode = cfg.get('search_mode')
+            if search_mode:
+                idx = self.cmb_mode.findText(search_mode)
+                if idx >= 0:
+                    self.cmb_mode.setCurrentIndex(idx)
+
+            # 케이스 센시티브
+            if 'case_sensitive' in cfg:
+                self.chk_case.setChecked(bool(cfg.get('case_sensitive', False)))
+
+            # 쿼리/검색결과 검색
+            self.edt_query.setText(cfg.get('query', ''))
+            self.edt_result_search.setText(cfg.get('result_search', ''))
+
+            # 되돌이 검색
+            self.chk_recursive_search.setChecked(bool(cfg.get('recursive_search', False)))
+
+            # 컨텍스트 라인 수
+            if 'prev_lines' in cfg:
+                self.edt_prev_lines.setText(str(cfg.get('prev_lines')))
+            if 'next_lines' in cfg:
+                self.edt_next_lines.setText(str(cfg.get('next_lines')))
+
+            # 폰트 사이즈
+            lv_pt = cfg.get('lineView_font_pt')
+            if isinstance(lv_pt, int) and lv_pt > 0:
+                f = QtGui.QFont(g_font_face, lv_pt)
+                self.lineView.setFont(f)
+                self.update_lineview_font_label(lv_pt)
+
+            tbl_pt = cfg.get('tblResults_font_pt')
+            if isinstance(tbl_pt, int) and tbl_pt > 0:
+                f2 = QtGui.QFont(g_font_face, tbl_pt)
+                self.tblResults.setFont(f2)
+                self.update_tbl_font_label(tbl_pt)
+
+            # 항상 위
+            if 'always_on_top' in cfg:
+                self.always_on_top_action.setChecked(bool(cfg.get('always_on_top', False)))
+
+            # Color 키워드 (텍스트 적용 후 적용 버튼 동작과 동일하게 반영)
+            color_text = cfg.get('color_keywords', '')
+            self.edt_color_keywords.setText(color_text)
+            if color_text:
+                # 파일이 로드 전이라도 내부 상태만 준비
+                self.on_color_settings_clicked()
+
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self, "경고", f"최신 설정 적용 중 일부 오류가 발생했습니다: {e}")
+
+    def save_latest_config(self):
+        """앱 종료 시 최신 설정 저장 (파일 관련 정보 제외)"""
+        try:
+            cfg = self.build_latest_config()
+            path = self.latest_config_file_path()
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(cfg, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            # 종료 직전 에러 팝업은 방해될 수 있으므로 로그만 출력
+            print(f"latest_config 저장 실패: {e}")
+
+    def load_latest_config(self):
+        """앱 시작 시 최신 설정 자동 로드"""
+        path = self.latest_config_file_path()
+        if not os.path.exists(path):
+            return
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+            self.apply_latest_config(cfg)
+            self.status.showMessage("최신 설정을 불러왔습니다.", 3000)
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self, "경고", f"최신 설정 불러오기 실패: {e}")
+
     # ---------------- 기존 기능들 ----------------
     def on_mode_changed(self, index):
         mode = self.cmb_mode.currentText()
@@ -3035,12 +3152,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
             if reply == QtWidgets.QMessageBox.Save:
                 self.save_file()
+                # 종료 확정 시 최신 설정 저장
+                self.save_latest_config()
                 event.accept()
             elif reply == QtWidgets.QMessageBox.Discard:
+                # 종료 확정 시 최신 설정 저장
+                self.save_latest_config()
                 event.accept()
             else:
                 event.ignore()
         else:
+            # 종료 확정 시 최신 설정 저장
+            self.save_latest_config()
             event.accept()
 
 
