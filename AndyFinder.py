@@ -1502,6 +1502,7 @@ class DragTableView(QtWidgets.QTableView):
     """드래그를 지원하는 TableView (Long Press + Move로 드래그 시작, 0번 컬럼(LineNumber) 전용)
        + 요청사항 반영: Ctrl+Wheel 폰트 확대/축소, Ctrl+C 복사, Ctrl+A 전체선택
        + 요청사항 반영: Shift + 마우스 오른쪽 클릭으로도 범위 선택 가능
+       + 요청사항 반영: 행 선택 시 가로 스크롤을 첫 번째 컬럼으로 이동
     """
     fontSizeChanged = Signal(int)
 
@@ -1536,6 +1537,20 @@ class DragTableView(QtWidgets.QTableView):
 
         # 드래그 이미지 설정용
         self._drag_pixmap_size = QtCore.QSize(100, 30)
+
+    def setModel(self, model):
+        """모델 설정 시 선택 변경 시그널 연결"""
+        super().setModel(model)
+        if model:
+            sel_model = self.selectionModel()
+            if sel_model:
+                sel_model.currentChanged.connect(self.on_current_changed)
+
+    def on_current_changed(self, current, previous):
+        """현재 선택이 변경될 때 가로 스크롤을 첫 번째 컬럼으로 이동"""
+        if current.isValid():
+            # 가로 스크롤바를 맨 왼쪽(첫 번째 컬럼)으로 이동
+            self.horizontalScrollBar().setValue(0)
 
     def mousePressEvent(self, event):
         # Shift + Right Click 으로 범위 선택 지원
