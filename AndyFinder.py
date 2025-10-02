@@ -1130,6 +1130,7 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
             self.fontSizeChanged.emit(font.pointSize())
 
     def keyPressEvent(self, event):
+        # lineView에 focus가 있을 때 F2/Shift+F2로 북마크 이동
         if event.key() == Qt.Key_F2:
             if event.modifiers() == Qt.ShiftModifier:
                 self.goto_previous_bookmark()
@@ -1719,6 +1720,22 @@ class DragTableView(QtWidgets.QTableView):
 
     # ---- Ctrl+C 복사, Ctrl+A 전체 선택 ----
     def keyPressEvent(self, event: QtGui.QKeyEvent):
+        # tblResults에 focus가 있을 때 F2/Shift+F2로 마킹된 row 이동
+        if event.key() == Qt.Key_F2:
+            if event.modifiers() == Qt.ShiftModifier:
+                # 부모 윈도우의 메서드 호출
+                parent = self.window()
+                if hasattr(parent, 'goto_prev_marked_result_from_table'):
+                    parent.goto_prev_marked_result_from_table()
+            else:
+                # 부모 윈도우의 메서드 호출
+                parent = self.window()
+                if hasattr(parent, 'goto_next_marked_result_from_table'):
+                    parent.goto_next_marked_result_from_table()
+            event.accept()
+            return
+
+        # Ctrl+C 복사, Ctrl+A 전체 선택
         if event.matches(QtGui.QKeySequence.Copy):
             self.copy_selected_rows_to_clipboard()
             event.accept()
@@ -2392,15 +2409,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_result_search_prev.clicked.connect(self.search_in_results_prev)
         self.btn_result_search_next.clicked.connect(self.search_in_results_next)
 
-        # F2/Shift+F2 단축키
-        self.sc_next_mark = QtGui.QShortcut(QtGui.QKeySequence("F2"), self)
-        self.sc_next_mark.setContext(Qt.WindowShortcut)
-        self.sc_next_mark.activated.connect(lambda: self.handle_marked_row_shortcut(next=True))
-
-        self.sc_prev_mark = QtGui.QShortcut(QtGui.QKeySequence("Shift+F2"), self)
-        self.sc_prev_mark.setContext(Qt.WindowShortcut)
-        self.sc_prev_mark.activated.connect(lambda: self.handle_marked_row_shortcut(next=False))
-
         self.on_mode_changed(1)
 
         # 즐겨찾기 콤보박스 초기 로딩
@@ -2533,13 +2541,58 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
     # ---------------- 마킹 관련 메서드 추가 ----------------
-    def handle_marked_row_shortcut(self, next: bool):
-        """F2/Shift+F2 단축키 처리: tblResults에 포커스 후 이동"""
-        self.tblResults.setFocus(Qt.OtherFocusReason)
-        if next:
-            self.goto_next_marked_result()
+    def goto_next_marked_result_from_table(self):
+        """tblResults에서 F2: 다음 마킹된 결과로 이동 + lineView도 해당 라인으로 이동 + focus는 tblResults 유지"""
+        if not self.resultsModel.marked_rows:
+            self.status.showMessage("마킹된 항목이 없습니다", 2000)
+            return
+
+        current_row = self.tblResults.currentIndex().row()
+        next_row = self.resultsModel.get_next_marked_row(current_row if current_row is not None else -1)
+
+        if next_row >= 0:
+            index = self.resultsModel.index(next_row, 0)
+            self.tblResults.setCurrentIndex(index)
+            self.tblResults.scrollTo(index, QtWidgets.QAbstractItemView.PositionAtCenter)
+
+            # lineView에서 해당 라인으로 이동
+            result = self.resultsModel.get(next_row)
+            line_number = result.line + 1
+            self.lineView.gotoLine(line_number)
+            self.update_all_highlights(result)
+
+            # focus는 tblResults로 다시 설정
+            self.tblResults.setFocus()
         else:
-            self.goto_prev_marked_result()
+            self.status.showMessage("다음 마킹된 항목이 없습니다", 2000)
+
+    def goto_prev_marked_result_from_table(self):
+        """tblResults에서 Shift+F2: 이전 마킹된 결과로 이동 + lineView도 해당 라인으로 이동 + focus는 tblResults 유지"""
+        if not self.resultsModel.marked_rows:
+            self.status.showMessage("마킹된 항목이 없습니다", 2000)
+            return
+
+        current_row = self.tblResults.currentIndex().row()
+        if current_row is None or current_row < 0:
+            prev_row = max(self.resultsModel.marked_rows) if self.resultsModel.marked_rows else -1
+        else:
+            prev_row = self.resultsModel.get_prev_marked_row(current_row)
+
+        if prev_row >= 0:
+            index = self.resultsModel.index(prev_row, 0)
+            self.tblResults.setCurrentIndex(index)
+            self.tblResults.scrollTo(index, QtWidgets.QAbstractItemView.PositionAtCenter)
+
+            # lineView에서 해당 라인으로 이동
+            result = self.resultsModel.get(prev_row)
+            line_number = result.line + 1
+            self.lineView.gotoLine(line_number)
+            self.update_all_highlights(result)
+
+            # focus는 tblResults로 다시 설정
+            self.tblResults.setFocus()
+        else:
+            self.status.showMessage("이전 마킹된 항목이 없습니다", 2000)
 
     def on_table_double_clicked(self, index: QModelIndex):
         """테이블 더블클릭: 마킹 토글 + 해당 라인으로 이동"""
