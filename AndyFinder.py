@@ -2708,14 +2708,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self._open_favorites_with_quick_add("기본 검색어 즐겨찾기", json_path, base_value, self.edt_query)
 
     def show_result_search_favorites(self):
-        """검색결과에서 검색 즐겨찾기 - 요청사항: edt_query 값을 '값'에 표시하고, '이름' 입력 UX 제공"""
-        base_value = self.edt_query.text()  # 요청사항에 따라 edt_query의 값을 사용
+        """검색결과에서 검색 즐겨찾기 - 요청사항: edt_result_search 값을 '값'에 표시하고, '이름' 입력 UX 제공"""
+        base_value = self.edt_result_search.text()  # 요청사항에 따라 edt_result_search의 값을 사용
         json_path = "./fav/edt_result_search.json"
         self._open_favorites_with_quick_add("검색결과에서 검색 즐겨찾기", json_path, base_value, self.edt_result_search)
 
     def show_color_keywords_favorites(self):
-        """Color 키워드 즐겨찾기 - 요청사항: edt_query 값을 '값'에 표시하고, '이름' 입력 UX 제공"""
-        base_value = self.edt_query.text()  # 요청사항에 따라 edt_query의 값을 사용
+        """Color 키워드 즐겨찾기 - 요청사항: edt_color_keywords 값을 '값'에 표시하고, '이름' 입력 UX 제공"""
+        base_value = self.edt_color_keywords.text()  # 요청사항에 따라 edt_color_keywords의 값을 사용
         json_path = "./fav/edt_color_keywords.json"
         self._open_favorites_with_quick_add("Highlight Color 즐겨찾기", json_path, base_value, self.edt_color_keywords)
 
