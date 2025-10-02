@@ -1450,14 +1450,17 @@ class DragDropCodeEditor(CodeEditor):
                 if hasattr(mw, 'append_text_to_lineedit'):
                     if event.key() == Qt.Key_1 and hasattr(mw, 'edt_query'):
                         mw.append_text_to_lineedit(mw.edt_query, selected_text)
+                        mw.edt_query.setFocus()
                         event.accept()
                         return
                     elif event.key() == Qt.Key_2 and hasattr(mw, 'edt_result_search'):
                         mw.append_text_to_lineedit(mw.edt_result_search, selected_text)
+                        mw.edt_result_search.setFocus()
                         event.accept()
                         return
                     elif event.key() == Qt.Key_3 and hasattr(mw, 'edt_color_keywords'):
                         mw.append_text_to_lineedit(mw.edt_color_keywords, selected_text)
+                        mw.edt_color_keywords.setFocus()
                         event.accept()
                         return
             # 선택이 없으면 기본 처리로 넘김
