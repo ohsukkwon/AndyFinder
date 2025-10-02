@@ -71,16 +71,16 @@ class MyVersionHistory:
     - 검색 시 소요 시간을 검색 결과 옆에 "Searching duration : xx sec(s)" 형식으로 표시
     '''
 
-    VER_INFO__ver_1_251002_1400 = "ver_1_251002_1400"
-    VER_DESC__ver_1_251002_1400 = '''
-    - 
+    VER_INFO__ver_1_251002_1426 = "ver_1_251002_1426"
+    VER_DESC__ver_1_251002_1426 = '''
+    - 행 선택 시 가로 스크롤을 첫 번째 컬럼으로 이동
     '''
 
     def __init__(self):
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251002_1400, self.VER_DESC__ver_1_251002_1400
+        return self.VER_INFO__ver_1_251002_1426, self.VER_DESC__ver_1_251002_1426
 
 # ------------------------------ Global 변수 ------------------------------
 g_my_version_info = MyVersionHistory()
@@ -1551,11 +1551,21 @@ class DragTableView(QtWidgets.QTableView):
             if sel_model:
                 sel_model.currentChanged.connect(self.on_current_changed)
 
+    def scrollTo(self, index, hint=QtWidgets.QAbstractItemView.EnsureVisible):
+        """세로 스크롤만 수행하고, 가로 스크롤은 항상 0(첫 번째 컬럼)으로 유지"""
+        super().scrollTo(index, hint)
+        # scrollTo 후 가로 스크롤을 첫 번째 컬럼으로 이동
+        self.horizontalScrollBar().setValue(0)
+        # 이벤트 루프 후에도 확실하게 설정 (Qt의 지연된 조정 방지)
+        QtCore.QTimer.singleShot(0, lambda: self.horizontalScrollBar().setValue(0))
+
     def on_current_changed(self, current, previous):
         """현재 선택이 변경될 때 가로 스크롤을 첫 번째 컬럼으로 이동"""
         if current.isValid():
             # 가로 스크롤바를 맨 왼쪽(첫 번째 컬럼)으로 이동
             self.horizontalScrollBar().setValue(0)
+            # 이벤트 루프 후에도 확실하게 설정
+            QtCore.QTimer.singleShot(0, lambda: self.horizontalScrollBar().setValue(0))
 
     def mousePressEvent(self, event):
         # Shift + Right Click 으로 범위 선택 지원
