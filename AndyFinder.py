@@ -71,11 +71,16 @@ class MyVersionHistory:
     - 검색 시 소요 시간을 검색 결과 옆에 "Searching duration : xx sec(s)" 형식으로 표시
     '''
 
+    VER_INFO__ver_1_251002_1400 = "ver_1_251002_1400"
+    VER_DESC__ver_1_251002_1400 = '''
+    - 
+    '''
+
     def __init__(self):
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251001_1700, self.VER_DESC__ver_1_251001_1700
+        return self.VER_INFO__ver_1_251002_1400, self.VER_DESC__ver_1_251002_1400
 
 # ------------------------------ Global 변수 ------------------------------
 g_my_version_info = MyVersionHistory()
