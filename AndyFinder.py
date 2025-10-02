@@ -502,11 +502,15 @@ class FavoriteDialog(QtWidgets.QDialog):
                 children = node.get('children', [])
                 self._build_tree_items(qitem, children, path)
             else:  # item
-                qitem = QtWidgets.QTreeWidgetItem([node.get('name', ''), node.get('value', '')])
+                value = node.get('value', '')
+                qitem = QtWidgets.QTreeWidgetItem([node.get('name', ''), value])
                 qitem.setIcon(0, item_icon)
                 qitem.setData(0, self.ROLE_PATH, path)
                 qitem.setData(0, self.ROLE_TYPE, 'item')
                 self._set_item_flags(qitem, 'item')
+                # 마우스 오버 시 값 전체를 툴팁으로 표시
+                qitem.setToolTip(0, value)
+                qitem.setToolTip(1, value)
                 parent_qitem.addChild(qitem)
 
     def _get_node_by_path(self, path: List[int]) -> Optional[dict]:

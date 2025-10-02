@@ -2,7 +2,7 @@
   "query": "^(== dumpstate:|--------- beginning of|------ EVENT LOG |------ SYSTEM LOG |------ RADIO LOG |------ KERNEL LOG |------ |--------- |----------------------- |----- pid|Cmd line: |Build fingerprint:|== Android Framework Services|== Running Application|== Dropbox crashes|FRAMEWORK|------ DUMPSYS CRITICAL |------ DUMPSYS HIGH |\\*\\* MEMINFO|ACTIVITY MANAGER RUNNING PROCESSES |== dumpstate: done|DUMP OF SERVICE |Kernel: Linux version)",
   "search_mode": "정규식",
   "case_sensitive": false,
-  "result_search": "dump of service",
+  "result_search": "watchinguid=",
   "color_keywords": "dump of service",
   "recursive_search": false,
   "prev_lines": "0",
