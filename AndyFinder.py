@@ -76,11 +76,16 @@ class MyVersionHistory:
     - 행 선택 시 가로 스크롤을 첫 번째 컬럼으로 이동
     '''
 
+    VER_INFO__ver_1_251003_1530 = "ver_1_251003_1530"
+    VER_DESC__ver_1_251003_1530 = '''
+    - 텍스트 검색(LineViewSearchDialog) 창에서 F5로 재검색 기능 추가
+    '''
+
     def __init__(self):
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251002_1426, self.VER_DESC__ver_1_251002_1426
+        return self.VER_INFO__ver_1_251003_1530, self.VER_DESC__ver_1_251003_1530
 
 # ------------------------------ Global 변수 ------------------------------
 g_my_version_info = MyVersionHistory()
@@ -209,8 +214,8 @@ class LineViewSearchDialog(QtWidgets.QDialog):
         # 검색어 입력
         form_layout = QtWidgets.QFormLayout()
         self.edt_search = QtWidgets.QLineEdit()
-        self.edt_search.setPlaceholderText("정규표현식 입력...")
-        form_layout.addRow("검색어:", self.edt_search)
+        self.edt_search.setPlaceholderText("정규표현식 입력/F5:새로고침...")
+        form_layout.addRow("검색어(정규표현식/F5:새로고침):", self.edt_search)
         layout.addLayout(form_layout)
 
         # 되돌이 검색
@@ -256,6 +261,24 @@ class LineViewSearchDialog(QtWidgets.QDialog):
         result = self.editor.search_prev(pattern, recursive)
         self.update_status(result)
 
+    # 추가: F5 키로 재검색 수행
+    def on_refresh_search(self):
+        """F5: 현재 검색어로 처음부터 다시 검색"""
+        pattern = self.edt_search.text().strip()
+        if not pattern:
+            self.lbl_status.setText("검색어를 입력하세요")
+            return
+
+        # 검색 상태 초기화 후 재검색
+        self.editor.internal_search_pattern = ""
+        self.editor.internal_search_matches = []
+        self.editor.internal_search_index = -1
+
+        # 재검색 수행
+        recursive = self.chk_recursive.isChecked()
+        result = self.editor.search_next(pattern, recursive)
+        self.update_status(result)
+
     def update_status(self, result):
         if result:
             current, total = result
@@ -270,6 +293,10 @@ class LineViewSearchDialog(QtWidgets.QDialog):
             return
         elif event.key() == Qt.Key_F4:
             self.on_search_next()
+            event.accept()
+            return
+        elif event.key() == Qt.Key_F5:  # 추가: F5 키 처리
+            self.on_refresh_search()
             event.accept()
             return
         elif event.key() == Qt.Key_Escape:
@@ -1378,7 +1405,7 @@ class DragDropCodeEditor(CodeEditor):
         # 현재 위치 이후의 매칭 찾기
         found = False
         for i, (start, end) in enumerate(self.internal_search_matches):
-            if start > cursor_pos:
+            if start >= cursor_pos:
                 self.internal_search_index = i
                 found = True
                 break
