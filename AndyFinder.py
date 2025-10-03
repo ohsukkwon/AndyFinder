@@ -14,6 +14,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt, Signal, QObject, QModelIndex, QTimer
 from PySide6.QtGui import QIcon
 
+
 # ------------------------------ 버전 관리 ------------------------------
 class MyVersionHistory:
     VER_INFO__ver_1_251001_0140 = "ver_1_251001_0140"
@@ -81,20 +82,32 @@ class MyVersionHistory:
     - 텍스트 검색(LineViewSearchDialog) 창에서 F5로 재검색 기능 추가
     '''
 
+    VER_INFO__ver_1_251003_2000 = "ver_1_251003_2000"
+    VER_DESC__ver_1_251003_2000 = '''
+    - 텍스트 검색(LineViewSearchDialog) 창에 전체검색 기능 추가
+    - 전체검색 버튼 클릭 시 TableView에 검색 결과(줄번호, 내용) 표시
+    - TableView row 더블클릭 시 lineView에서 해당 라인으로 이동
+    '''
+
     def __init__(self):
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251003_1530, self.VER_DESC__ver_1_251003_1530
+        return self.VER_INFO__ver_1_251003_2000, self.VER_DESC__ver_1_251003_2000
+
 
 # ------------------------------ Global 변수 ------------------------------
 g_my_version_info = MyVersionHistory()
 
 gCurVerInfo, gCurVerDesc = g_my_version_info.get_version_info()
 
+g_pgm_name = 'AndyFinder'
+g_winsize_w = 1300
+g_winsize_h = 800
 g_font_face = 'Arial'
 g_font_size = 8
 g_MIN_FONT_SIZE = 1
+g_MAX_FONT_SIZE = 70
 g_icon_name = 'app.png'
 
 MIN_BUF_LOAD_SIZE = 1 * 1024 * 1024
@@ -102,12 +115,14 @@ MIN_BUF_LOAD_SIZE = 1 * 1024 * 1024
 debug_measuretime_start = 0
 debug_measuretime_snapshot = 0
 
+
 # ------------------------------ 데이터 구조 ------------------------------
 @dataclass
 class SearchResult:
     line: int
     snippet: str
     matches: List[Tuple[int, int]]  # (start, end) in snippet string
+
 
 # ------------------------------ Long Click LineEdit ------------------------------
 class LongClickLineEdit(QtWidgets.QLineEdit):
@@ -196,10 +211,10 @@ class FavoriteComboBox(QtWidgets.QComboBox):
         super().keyPressEvent(event)
 
 
-# ------------------------------ LineView 검색 다이얼로그 (Modeless) ------------------------------
+# ------------------------------ LineView 검색 다이얼로그 (Modeless + 전체검색 기능) ------------------------------
 
 class LineViewSearchDialog(QtWidgets.QDialog):
-    """lineView 내부 검색 다이얼로그 (Modeless)"""
+    """lineView 내부 검색 다이얼로그 (Modeless + 전체검색 기능)"""
 
     def __init__(self, editor, parent=None):
         super().__init__(parent)
@@ -229,25 +244,119 @@ class LineViewSearchDialog(QtWidgets.QDialog):
 
         # 버튼들
         btn_layout = QtWidgets.QHBoxLayout()
-        self.btn_prev = QtWidgets.QPushButton("Prev (F3)")
-        self.btn_next = QtWidgets.QPushButton("Next (F4)")
+        self.btn_prev = QtWidgets.QPushButton("Prev(F3)")
+        self.btn_next = QtWidgets.QPushButton("Next(F4)")
+        self.btn_search_all = QtWidgets.QPushButton("전체검색")  # 추가
+        self.btn_search_all.setStyleSheet("""
+                    QPushButton {
+                        background-color: blue4;
+                        color: #FFFFFF;
+                        border: 2px solid black;  /* 기본 border */
+                        font-weight: bold;
+                    }
+                    QPushButton:hover {
+                        color: white;
+                        font-weight: bold;
+                        border: 2px solid white;
+                    }
+                """)
+
         self.btn_close = QtWidgets.QPushButton("닫기")
 
         btn_layout.addWidget(self.btn_prev)
         self.btn_prev.setAutoDefault(False)
         btn_layout.addWidget(self.btn_next)
         self.btn_next.setAutoDefault(False)
+        btn_layout.addWidget(self.btn_search_all)  # 추가
+        self.btn_search_all.setAutoDefault(False)
         btn_layout.addStretch()
         btn_layout.addWidget(self.btn_close)
         layout.addLayout(btn_layout)
+
+        # 전체검색 결과 테이블 추가
+        self.tbl_search_results = QtWidgets.QTableView()
+        self.tbl_search_results.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.tbl_search_results.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.tbl_search_results.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.tbl_search_results.verticalHeader().setVisible(False)
+        self.tbl_search_results.setAlternatingRowColors(True)
+        self.tbl_search_results.setWordWrap(False)
+        self.tbl_search_results.setTextElideMode(Qt.ElideNone)
+
+        # 모델 설정
+        self.search_model = QtGui.QStandardItemModel()
+        self.search_model.setHorizontalHeaderLabels(["LineNumber", "내용"])
+        self.tbl_search_results.setModel(self.search_model)
+
+        # 헤더 설정
+        header = self.tbl_search_results.horizontalHeader()
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+
+        layout.addWidget(self.tbl_search_results, 1)  # stretch factor 1
 
         # 시그널
         self.edt_search.returnPressed.connect(self.on_search_next)
         self.btn_prev.clicked.connect(self.on_search_prev)
         self.btn_next.clicked.connect(self.on_search_next)
+        self.btn_search_all.clicked.connect(self.on_search_all)  # 추가
         self.btn_close.clicked.connect(self.close)
+        self.tbl_search_results.doubleClicked.connect(self.on_table_double_clicked)  # 추가
 
-        self.resize(500, 150)
+        self.resize(800, 600)
+
+    def on_search_all(self):
+        """전체검색: edt_search의 정규표현식으로 lineView 전체를 검색하여 테이블에 표시"""
+        pattern = self.edt_search.text().strip()
+        if not pattern:
+            self.lbl_status.setText("검색어를 입력하세요")
+            return
+
+        # 모델 초기화
+        self.search_model.removeRows(0, self.search_model.rowCount())
+
+        try:
+            regex = re.compile(pattern, re.IGNORECASE)
+        except re.error as e:
+            self.lbl_status.setText(f"정규식 오류: {e}")
+            return
+
+        content = self.editor.toPlainText()
+        lines = content.split('\n')
+        match_count = 0
+
+        for line_num, line_text in enumerate(lines, start=1):
+            if regex.search(line_text):
+                # 줄번호와 내용을 테이블에 추가
+                line_num_item = QtGui.QStandardItem(str(line_num))
+                content_item = QtGui.QStandardItem(line_text)
+                self.search_model.appendRow([line_num_item, content_item])
+                match_count += 1
+
+        self.lbl_status.setText(f"전체검색 완료: {match_count}건")
+
+        # 첫 번째 결과로 이동 (있는 경우)
+        if match_count > 0:
+            self.tbl_search_results.selectRow(0)
+
+    def on_table_double_clicked(self, index):
+        """테이블 더블클릭: lineView에서 해당 라인으로 이동하고 focus는 테이블 유지"""
+        if not index.isValid():
+            return
+
+        # 줄번호 가져오기 (0번 컬럼)
+        line_num_item = self.search_model.item(index.row(), 0)
+        if not line_num_item:
+            return
+
+        try:
+            line_number = int(line_num_item.text())
+            # lineView에서 해당 라인으로 이동
+            self.editor.gotoLine(line_number)
+            # focus는 테이블로 다시 설정
+            self.tbl_search_results.setFocus()
+        except ValueError:
+            pass
 
     def on_search_next(self):
         pattern = self.edt_search.text()
@@ -1141,7 +1250,7 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
     def zoomIn(self):
         font = self.font()
         size = font.pointSize()
-        if size < 72:
+        if size < g_MAX_FONT_SIZE:
             font.setPointSize(size + 1)
             # 에디터/라인넘버 동시 적용
             self.setFont(font)
@@ -1720,7 +1829,7 @@ class DragTableView(QtWidgets.QTableView):
     def zoomIn(self):
         font = self.font()
         size = font.pointSize()
-        if size < 72:
+        if size < g_MAX_FONT_SIZE:
             font.setPointSize(size + 1)
             self.setFont(font)
             self._refresh_layout_after_font_change()
@@ -1933,8 +2042,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(f"Andy Finder - {gCurVerInfo}")
-        self.resize(1300, 800)
+        self.setWindowTitle(f"{g_pgm_name} - {gCurVerInfo}")
+        self.resize(g_winsize_w, g_winsize_h)
 
         icon_path = self.resource_path(g_icon_name)
         if os.path.isfile(icon_path):
@@ -1979,8 +2088,8 @@ class MainWindow(QtWidgets.QMainWindow):
             QtGui.QColor(255, 235, 210), QtGui.QColor(235, 210, 255),
         ]
 
-        self._build_ui()
         self._create_menus()
+        self._build_ui()
 
         # 시작 시 최신 설정 로드
         try:
@@ -2088,6 +2197,23 @@ class MainWindow(QtWidgets.QMainWindow):
             "(dumpstate) This tool can find and analyse a (dumpstate)file."
         )
 
+    def highlight_current_line(self):
+        extra_selections = []
+
+        if not self.lineView.isReadOnly():
+            selection = QtWidgets.QTextEdit.ExtraSelection()
+
+            # 노란색 배경
+            line_color = QtGui.QColor(QtCore.Qt.yellow).lighter(160)
+
+            selection.format.setBackground(line_color)
+            selection.format.setProperty(QtGui.QTextFormat.FullWidthSelection, True)
+            selection.cursor = self.lineView.textCursor()
+            selection.cursor.clearSelection()
+            extra_selections.append(selection)
+
+        self.lineView.setExtraSelections(extra_selections)
+
     def _build_ui(self):
         top_widget = QtWidgets.QWidget()
         top_layout = QtWidgets.QVBoxLayout(top_widget)
@@ -2100,15 +2226,15 @@ class MainWindow(QtWidgets.QMainWindow):
         first_layout.setContentsMargins(0, 0, 0, 0)
         first_layout.setSpacing(8)
 
-        self.btn_open = QtWidgets.QPushButton("열기")
+        self.btn_open = QtWidgets.QPushButton("Open file...")
 
-        self.btn_open.setFixedWidth(120)  # 가로 120px 고정
+        self.btn_open.setFixedWidth(120)  # 가로 120px
         self.btn_open.setStyleSheet("""
             QPushButton {
                 background-color: #82CAFF;
                 color: black;
                 border: 1px solid black;  /* 기본 border */
-                font-weight: normal;
+                font-weight: bold;
             }
             QPushButton:hover {
                 color: red;
@@ -2117,7 +2243,7 @@ class MainWindow(QtWidgets.QMainWindow):
             }
                 """)
 
-        self.lbl_file = QtWidgets.QLabel("파일 없음")
+        self.lbl_file = QtWidgets.QLabel("No file loaded yet!")
         self.lbl_file.setMinimumWidth(300)
         self.lbl_file.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
@@ -2136,22 +2262,27 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_query_fav = QtWidgets.QPushButton("★")
         self.btn_query_fav.setToolTip("기본 검색어 즐겨찾기")
         self.btn_query_fav.setFixedSize(26, 26)
+        self.btn_query_fav.setContentsMargins(0, 0, 0, 0)
         self.btn_query_fav.setStyleSheet("""
             QPushButton {
-                background-color: #FFD700;
-                color: black;
-                border: 2px solid #FF0000;
+                background-color: Black;
+                color: yellow;
+                border: 2px solid Black;
                 border-radius: 4px;
                 font-weight: bold;
+                padding: 0px;
+                margin: 0px;
             }
             QPushButton:hover {
-                border: 1px solid #FFAA00;
+                background-color: yellow;
+                border: 2px solid blue;
+                color: blue;
             }
         """)
         self.btn_query_fav.clicked.connect(self.show_query_favorites)
 
         self.edt_query = QueryLineEdit()
-        self.edt_query.setPlaceholderText("검색어를 입력하세요 (F5로 검색)")
+        self.edt_query.setPlaceholderText("검색어를 입력하세요 (F5:검색)")
         self.edt_query.returnPressed.connect(self.do_search)
         self.edt_query.setStyleSheet("QLineEdit { background-color : lightyellow; }")
 
@@ -2182,7 +2313,6 @@ class MainWindow(QtWidgets.QMainWindow):
             }
             QComboBox QAbstractItemView {
                 background-color: white;
-                selection-background-color: yellow;
                 selection-color: red;
             }
         """)
@@ -2190,18 +2320,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.chk_case = QtWidgets.QCheckBox("대소문자")
 
         self.btn_search = QtWidgets.QPushButton("Search")
-        self.btn_search.setFixedWidth(120)  # 가로 120px 고정
+        self.btn_search.setFixedWidth(120)  # 가로 120px
         self.btn_search.setStyleSheet("""
             QPushButton {
-                background-color: #16E2F5;
-                color: black;
-                border: 1px solid black;  /* 기본 border */
-                font-weight: normal;
+                background-color: #10069f;
+                color: #FFFFFF;
+                border: 2px solid black;  /* 기본 border */
+                font-weight: bold;
             }
             QPushButton:hover {
-                color: red;
+                color: yellow;
                 font-weight: bold;
-                border: 2px solid red;
+                border: 2px solid yellow;
             }
         """)
 
@@ -2210,7 +2340,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.edt_prev_lines.setValidator(int_validator)
         self.edt_prev_lines.setText("0")
         self.edt_prev_lines.setPlaceholderText("previous lines")
-        self.edt_prev_lines.setFixedWidth(80)
+        self.edt_prev_lines.setFixedWidth(30)
         self.edt_prev_lines.setToolTip("매칭 라인 이전에 포함할 줄 수 (기본 0)")
         self.edt_prev_lines.editingFinished.connect(self.on_context_lines_changed)
 
@@ -2218,21 +2348,21 @@ class MainWindow(QtWidgets.QMainWindow):
         self.edt_next_lines.setValidator(int_validator)
         self.edt_next_lines.setText("0")
         self.edt_next_lines.setPlaceholderText("next lines")
-        self.edt_next_lines.setFixedWidth(80)
+        self.edt_next_lines.setFixedWidth(30)
         self.edt_next_lines.setToolTip("매칭 라인 이후에 포함할 줄 수 (기본 0)")
         self.edt_next_lines.editingFinished.connect(self.on_context_lines_changed)
 
         self.btn_stop = QtWidgets.QPushButton("중지")
         self.btn_stop.setEnabled(False)
         self.prog = QtWidgets.QProgressBar()
-        self.prog.setMaximumWidth(200)
+        self.prog.setFixedWidth(150)
         self.prog.setRange(0, 100)
         self.prog.setValue(0)
 
         # **새로 추가: 즐겨찾기 드롭박스 (prog 우측에 배치)**
         self.cmb_favorites = FavoriteComboBox()
         self.cmb_favorites.setMinimumWidth(800)  # 충분한 width 설정
-        self.cmb_favorites.setToolTip("기본 검색어 즐겨찾기 항목 선택 (F5로 로딩)")
+        self.cmb_favorites.setToolTip("기본 검색어 즐겨찾기 항목 선택 (F5:로딩)")
         self.cmb_favorites.currentIndexChanged.connect(self.on_favorite_combobox_changed)
         self.cmb_favorites.setStyleSheet("""
                     QComboBox {
@@ -2243,7 +2373,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     }
                     QComboBox:hover {
                         border: 1px solid #0078D7;
-                      }
+                    }
                     QComboBox QAbstractItemView {
                         background-color: white;
                         selection-color: red;
@@ -2273,16 +2403,21 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_result_search_fav = QtWidgets.QPushButton("★")
         self.btn_result_search_fav.setToolTip("검색결과에서 검색 즐겨찾기")
         self.btn_result_search_fav.setFixedSize(26, 26)
+        self.btn_result_search_fav.setContentsMargins(0, 0, 0, 0)
         self.btn_result_search_fav.setStyleSheet("""
             QPushButton {
-                background-color: #FFD700;
+                background-color: #66FF00;
                 color: black;
-                border: 2px solid #FF0000;
+                border: 2px solid #0000FF;
                 border-radius: 4px;
                 font-weight: bold;
+                padding: 0px;
+                margin: 0px;
             }
             QPushButton:hover {
-                border: 1px solid #FFAA00;
+                background-color: yellow;
+                border: 2px solid blue;
+                color: blue;
             }
         """)
         self.btn_result_search_fav.clicked.connect(self.show_result_search_favorites)
@@ -2292,8 +2427,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.edt_result_search.returnPressed.connect(self.search_in_results_next)
         self.edt_result_search.setStyleSheet("QLineEdit { background-color: #F0FFFF; }")
 
-        self.btn_result_search_prev = QtWidgets.QPushButton("이전 (F3)")
-        self.btn_result_search_next = QtWidgets.QPushButton("다음 (F4)")
+        self.btn_result_search_prev = QtWidgets.QPushButton("이전(F3)")
+        self.btn_result_search_prev.setFixedWidth(80)  # 가로 80px
+        self.btn_result_search_next = QtWidgets.QPushButton("다음(F4)")
+        self.btn_result_search_next.setFixedWidth(80)  # 가로 80px
         self.lbl_result_search_status = QtWidgets.QLabel("")
 
         self.chk_recursive_search = QtWidgets.QCheckBox("되돌이 검색")
@@ -2319,22 +2456,27 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_color_keywords_fav = QtWidgets.QPushButton("★")
         self.btn_color_keywords_fav.setToolTip("Highlight Color 즐겨찾기")
         self.btn_color_keywords_fav.setFixedSize(26, 26)
+        self.btn_color_keywords_fav.setContentsMargins(0, 0, 0, 0)
         self.btn_color_keywords_fav.setStyleSheet("""
             QPushButton {
-                background-color: #FFD700;
+                background-color: #DBF9DB;
                 color: black;
-                border: 2px solid #FF0000;
+                border: 2px solid #0000FF;
                 border-radius: 4px;
                 font-weight: bold;
+                padding: 0px;
+                margin: 0px;
             }
             QPushButton:hover {
-                border: 1px solid #FFAA00;
+                background-color: yellow;
+                border: 2px solid blue;
+                color: blue;
             }
         """)
         self.btn_color_keywords_fav.clicked.connect(self.show_color_keywords_favorites)
 
         self.edt_color_keywords = ColorKeywordsLineEdit()
-        self.edt_color_keywords.setPlaceholderText("예: activity|window|package (F5로 설정)")
+        self.edt_color_keywords.setPlaceholderText("예: activity|window|package (F5:Color 설정)")
         self.edt_color_keywords.setStyleSheet("QLineEdit { background-color: #C9DFEC; }")
 
         self.btn_apply_colors = QtWidgets.QPushButton("설정")
@@ -2368,12 +2510,18 @@ class MainWindow(QtWidgets.QMainWindow):
             QSplitter::handle:vertical {
                 height: 3px;
             }
+            /* mouse over 상태 */
+            QSplitter::handle:vertical:hover {
+                background-color: #FE5000;
+            }
         """)
 
         self.lineView = DragDropCodeEditor()
         self.lineView.setFont(QtGui.QFont(g_font_face, g_font_size))
         self.lineView.textChanged.connect(self.on_text_changed)
         self.lineView.fileDropped.connect(self.load_dropped_file)
+
+        self.lineView.cursorPositionChanged.connect(self.highlight_current_line)
 
         # DragTableView로 변경 (Long Press 드래그 지원)
         self.tblResults = DragTableView()
@@ -2436,7 +2584,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_result_search_prev.clicked.connect(self.search_in_results_prev)
         self.btn_result_search_next.clicked.connect(self.search_in_results_next)
 
-        self.on_mode_changed(1)
+        self.on_mode_changed(1)  # 정규식 기본
 
         # 즐겨찾기 콤보박스 초기 로딩
         self.refresh_favorite_combobox()
@@ -2448,7 +2596,7 @@ class MainWindow(QtWidgets.QMainWindow):
         favorites = self._load_favorites_from_file(json_path)
 
         self.cmb_favorites.clear()
-        self.cmb_favorites.addItem("-- 즐겨찾기 선택 --", None)  # 플레이스홀더
+        self.cmb_favorites.addItem("-- 즐겨찾기(F5:적용) --", None)  # 플레이스홀더
 
         self._populate_combobox_recursive(favorites, "")
 
@@ -2476,7 +2624,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if value:
                 self.cmb_favorites.setToolTip(f"값: {value}")
         else:
-            self.cmb_favorites.setToolTip("기본 검색어 즐겨찾기 항목 선택 (F5로 로딩)")
+            self.cmb_favorites.setToolTip("기본 검색어 즐겨찾기 항목 선택 (F5:로딩)")
 
     def load_favorite_from_combobox(self):
         """cmb_favorites에서 선택된 항목의 값을 edt_query에 로딩하고 포커스 설정"""
@@ -2856,7 +3004,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 if idx >= 0:
                     self.cmb_mode.setCurrentIndex(idx)
 
-            # 케이스 센시티브
+            # 대소문자
             if 'case_sensitive' in cfg:
                 self.chk_case.setChecked(bool(cfg.get('case_sensitive', False)))
 
@@ -3176,7 +3324,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def goto_result_from_table(self, index: QModelIndex):
         r = self.resultsModel.get(index.row())
         self.current_result_index = index.row()
-        self.lineView.setFocus()
 
         block = self.lineView.document().findBlockByNumber(r.line)
         if block.isValid():
@@ -3188,6 +3335,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.update_all_highlights(r)
         self.tblResults.selectRow(index.row())
+
+        # focus는 tblResults로 유지
+        self.tblResults.setFocus()
 
     def goto_result(self, r: SearchResult):
         if not self.lineView.toPlainText():
@@ -3203,27 +3353,28 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tblResults.scrollTo(tidx, QtWidgets.QAbstractItemView.PositionAtCenter)
 
     def update_all_highlights(self, result: Optional[SearchResult] = None):
-        extraSelections = []
-        extraSelections.extend(self.lineView.color_highlight_selections)
-
-        if result:
-            lines = self.lineView.toPlainText().split('\n')
-            if result.line < len(lines):
-                line_text = lines[result.line]
-                line_start_pos = sum(len(lines[i]) + 1 for i in range(result.line))
-
-                for start, end in result.matches:
-                    if start < len(line_text) and end <= len(line_text):
-                        selection = QtWidgets.QTextEdit.ExtraSelection()
-                        selection.format.setBackground(QtGui.QColor(102, 255, 255))
-
-                        cursor = QtGui.QTextCursor(self.lineView.document())
-                        cursor.setPosition(line_start_pos + start)
-                        cursor.setPosition(line_start_pos + end, QtGui.QTextCursor.KeepAnchor)
-                        selection.cursor = cursor
-                        extraSelections.append(selection)
-
-        self.lineView.setExtraSelections(extraSelections)
+        # extraSelections = []
+        # extraSelections.extend(self.lineView.color_highlight_selections)
+        #
+        # if result:
+        #     lines = self.lineView.toPlainText().split('\n')
+        #     if result.line < len(lines):
+        #         line_text = lines[result.line]
+        #         line_start_pos = sum(len(lines[i]) + 1 for i in range(result.line))
+        #
+        #         for start, end in result.matches:
+        #             if start < len(line_text) and end <= len(line_text):
+        #                 selection = QtWidgets.QTextEdit.ExtraSelection()
+        #                 selection.format.setBackground(QtGui.QColor(102, 255, 255))
+        #
+        #                 cursor = QtGui.QTextCursor(self.lineView.document())
+        #                 cursor.setPosition(line_start_pos + start)
+        #                 cursor.setPosition(line_start_pos + end, QtGui.QTextCursor.KeepAnchor)
+        #                 selection.cursor = cursor
+        #                 extraSelections.append(selection)
+        #
+        # self.lineView.setExtraSelections(extraSelections)
+        pass
 
     def highlight_search_results(self, result: SearchResult):
         self.update_all_highlights(result)
