@@ -2327,6 +2327,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 color: #FFFFFF;
                 border: 2px solid black;  /* 기본 border */
                 font-weight: bold;
+                margin-right: 20px;
             }
             QPushButton:hover {
                 color: yellow;
@@ -2336,19 +2337,22 @@ class MainWindow(QtWidgets.QMainWindow):
         """)
 
         int_validator = QtGui.QIntValidator(0, 999999, self)
+
+        lbl_prev = QtWidgets.QLabel("previous lines:")
         self.edt_prev_lines = QueryLineEdit()
         self.edt_prev_lines.setValidator(int_validator)
         self.edt_prev_lines.setText("0")
         self.edt_prev_lines.setPlaceholderText("previous lines")
-        self.edt_prev_lines.setFixedWidth(30)
+        self.edt_prev_lines.setFixedWidth(35)
         self.edt_prev_lines.setToolTip("매칭 라인 이전에 포함할 줄 수 (기본 0)")
         self.edt_prev_lines.editingFinished.connect(self.on_context_lines_changed)
 
+        lbl_next = QtWidgets.QLabel("next lines:")
         self.edt_next_lines = QueryLineEdit()
         self.edt_next_lines.setValidator(int_validator)
         self.edt_next_lines.setText("0")
         self.edt_next_lines.setPlaceholderText("next lines")
-        self.edt_next_lines.setFixedWidth(30)
+        self.edt_next_lines.setFixedWidth(35)
         self.edt_next_lines.setToolTip("매칭 라인 이후에 포함할 줄 수 (기본 0)")
         self.edt_next_lines.editingFinished.connect(self.on_context_lines_changed)
 
@@ -2384,7 +2388,9 @@ class MainWindow(QtWidgets.QMainWindow):
         third_layout.addWidget(self.cmb_mode)
         third_layout.addWidget(self.chk_case)
         third_layout.addWidget(self.btn_search)
+        third_layout.addWidget(lbl_prev)
         third_layout.addWidget(self.edt_prev_lines)
+        third_layout.addWidget(lbl_next)
         third_layout.addWidget(self.edt_next_lines)
         third_layout.addWidget(self.btn_stop)
         third_layout.addWidget(self.prog)
