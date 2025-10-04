@@ -19,82 +19,83 @@ from PySide6.QtGui import QIcon
 class MyVersionHistory:
     VER_INFO__ver_1_251001_0140 = "ver_1_251001_0140"
     VER_DESC__ver_1_251001_0140 = '''
-    1. Highlight Color 유지 기능 추가 - lineView의 mouse event에도 Color 하이라이트 유지.
-    2. 프로그램 Title에 버전 정보 추가.
-    3. 북마크 기능 추가 - Line Number 더블클릭으로 북마크 토글, F2/Shift+F2로 이동.
-    4. 설정 저장/불러오기 기능 추가.
-    5. 즐겨찾기 기능 추가 (edt_query, edt_result_search, edt_color_keywords).
-    6. F5 단축키 추가 (edt_query: 검색, edt_color_keywords: 설정).
-    7. lineView 내부 검색 기능 추가 (Ctrl+F, F3/F4로 이동).
-    8. Long Click시 바로 입력 UI 제공 후 즐겨찾기 목록 표시.
-    9. lineView 검색 다이얼로그 Modeless 변경.
-    10. Ctrl+F 실행시 선택된 텍스트를 검색어로 자동 입력.
-    11. tblResults row 더블클릭으로 Light Green 마킹 토글 기능 추가.
-    12. tblResults에서 F2/Shift+F2로 마킹된 row 이동 기능 추가.
-    13. tblResults LineNumber를 lineView LineNumber로 Drag&Drop하여 범위 복사 기능 추가.
-    14. 즐겨찾기 Category(폴더 구조) 지원: 세 가지 즐겨찾기(기본 검색어/결과내 검색/Color 키워드)에 폴더 생성/이동/선택 기능 추가.
-    '''
+1. Highlight Color 유지 기능 추가 - lineView의 mouse event에도 Color 하이라이트 유지.
+2. 프로그램 Title에 버전 정보 추가.
+3. 북마크 기능 추가 - Line Number 더블클릭으로 북마크 토글, F2/Shift+F2로 이동.
+4. 설정 저장/불러오기 기능 추가.
+5. 즐겨찾기 기능 추가 (edt_query, edt_result_search, edt_color_keywords).
+6. F5 단축키 추가 (edt_query: 검색, edt_color_keywords: 설정).
+7. lineView 내부 검색 기능 추가 (Ctrl+F, F3/F4로 이동).
+8. Long Click시 바로 입력 UI 제공 후 즐겨찾기 목록 표시.
+9. lineView 검색 다이얼로그 Modeless 변경.
+10. Ctrl+F 실행시 선택된 텍스트를 검색어로 자동 입력.
+11. tblResults row 더블클릭으로 Light Green 마킹 토글 기능 추가.
+12. tblResults에서 F2/Shift+F2로 마킹된 row 이동 기능 추가.
+13. tblResults LineNumber를 lineView LineNumber로 Drag&Drop하여 범위 복사 기능 추가.
+14. 즐겨찾기 Category(폴더 구조) 지원: 세 가지 즐겨찾기(기본 검색어/결과내 검색/Color 키워드)에 폴더 생성/이동/선택 기능 추가.
+'''
     VER_INFO__ver_1_251001_0927 = "ver_1_251001_0927"
     VER_DESC__ver_1_251001_0927 = '''
-    1. 즐겨찾기 Add 입력방식 개선 : 문자열이 있는 경우 값에 표시하고, 이름을 입력받도록 개선
-    '''
+1. 즐겨찾기 Add 입력방식 개선 : 문자열이 있는 경우 값에 표시하고, 이름을 입력받도록 개선
+'''
     VER_INFO__ver_1_251001_1300 = "ver_1_251001_1300"
     VER_DESC__ver_1_251001_1300 = '''
-    - 파일 메뉴에 "All data clear" 메뉴 추가: lineView, tblResults, lbl_status 등 로드된 파일 관련 정보를 초기화합니다.
-    - lineView에 포커스가 있을 때 Ctrl + Mouse Wheel로 글꼴 크기 조절 시, 라인 번호 영역(LineNumberArea)도 동일하게 폰트 크기가 연동되도록 수정:
-      - CodeEditor.setFont을 오버라이드하여 에디터와 라인 번호 영역의 폰트를 동기화.
-      - zoomIn/zoomOut에서도 LineNumberArea 폰트를 동기화하고, 너비를 재계산하도록 처리.
-      - wheelEvent는 lineView에 포커스가 있고 Ctrl이 눌린 경우에만 확대/축소 수행.
-    '''
+- 파일 메뉴에 "All data clear" 메뉴 추가: lineView, tblResults, lbl_status 등 로드된 파일 관련 정보를 초기화합니다.
+- lineView에 포커스가 있을 때 Ctrl + Mouse Wheel로 글꼴 크기 조절 시, 라인 번호 영역(LineNumberArea)도 동일하게 폰트 크기가 연동되도록 수정:
+- CodeEditor.setFont을 오버라이드하여 에디터와 라인 번호 영역의 폰트를 동기화.
+- zoomIn/zoomOut에서도 LineNumberArea 폰트를 동기화하고, 너비를 재계산하도록 처리.
+- wheelEvent는 lineView에 포커스가 있고 Ctrl이 눌린 경우에만 확대/축소 수행.
+'''
     VER_INFO__ver_1_251001_1500 = "ver_1_251001_1500"
     VER_DESC__ver_1_251001_1500 = '''
-    - 저장 경로: ./config/latest_config.json
-    - 저장/로드 대상: 각종 설정값(UI 상태)만 저장하며, 로드된 파일 관련 정보는 저장하지 않습니다.
-    변경 요약:
-    - MainWindow에 latest_config 관련 메서드 추가: latest_config_file_path, build_latest_config, apply_latest_config, save_latest_config, load_latest_config
-    - 프로그램 시작 시 load_latest_config() 호출
-    - 종료 시 closeEvent에서 save_latest_config() 호출 (파일 저장 여부와 무관하게 종료 확정 시 항상 저장)
-    - 저장 항목: query, search_mode, case_sensitive, result_search, color_keywords, recursive_search, prev_lines, next_lines, lineView_font_pt, tblResults_font_pt, always_on_top
-    '''
+- MainWindow에 latest_config 관련 메서드 추가: latest_config_file_path, build_latest_config, apply_latest_config, save_latest_config, load_latest_config
+- 프로그램 시작 시 load_latest_config() 호출
+- 종료 시 closeEvent에서 save_latest_config() 호출 (파일 저장 여부와 무관하게 종료 확정 시 항상 저장)
+- 저장 항목: query, search_mode, case_sensitive, result_search, color_keywords, recursive_search, prev_lines, next_lines, lineView_font_pt, tblResults_font_pt, always_on_top
+'''
 
     VER_INFO__ver_1_251001_1600 = "ver_1_251001_1600"
     VER_DESC__ver_1_251001_1600 = '''
-    - prog(QProgressBar) 우측에 dropbox(QComboBox) 추가
-    - dropbox에 "기본 검색어 즐겨찾기" 항목을 category 구분하여 모든 favorite 항목의 이름 표시
-    - dropbox의 세부 항목 이름이 전체가 보이도록 충분한 width 설정
-    - 이름 위에 마우스 over 시 값의 내용이 툴팁으로 표시
-    - dropbox에서 항목 선택 후 F5 누르면 선택된 favorite 값을 edt_query에 로딩하고 포커스 설정
-    '''
+- prog(QProgressBar) 우측에 dropbox(QComboBox) 추가
+- dropbox에 "기본 검색어 즐겨찾기" 항목을 category 구분하여 모든 favorite 항목의 이름 표시
+- dropbox의 세부 항목 이름이 전체가 보이도록 충분한 width 설정
+- 이름 위에 마우스 over 시 값의 내용이 툴팁으로 표시
+- dropbox에서 항목 선택 후 F5 누르면 선택된 favorite 값을 edt_query에 로딩하고 포커스 설정
+'''
 
     VER_INFO__ver_1_251001_1700 = "ver_1_251001_1700"
     VER_DESC__ver_1_251001_1700 = '''
-    - 파일 로딩 시 소요 시간을 lbl_status에 "Loading duration : xx sec(s)" 형식으로 표시
-    - 검색 시 소요 시간을 검색 결과 옆에 "Searching duration : xx sec(s)" 형식으로 표시
-    '''
+- 파일 로딩 시 소요 시간을 lbl_status에 "Loading duration : xx sec(s)" 형식으로 표시
+- 검색 시 소요 시간을 검색 결과 옆에 "Searching duration : xx sec(s)" 형식으로 표시
+'''
 
     VER_INFO__ver_1_251002_1426 = "ver_1_251002_1426"
     VER_DESC__ver_1_251002_1426 = '''
-    - 행 선택 시 가로 스크롤을 첫 번째 컬럼으로 이동
-    '''
+- 행 선택 시 가로 스크롤을 첫 번째 컬럼으로 이동
+'''
 
     VER_INFO__ver_1_251003_1530 = "ver_1_251003_1530"
     VER_DESC__ver_1_251003_1530 = '''
-    - 텍스트 검색(LineViewSearchDialog) 창에서 F5로 재검색 기능 추가
-    '''
+- 텍스트 검색(LineViewSearchDialog) 창에서 F5로 재검색 기능 추가
+'''
 
     VER_INFO__ver_1_251003_2000 = "ver_1_251003_2000"
     VER_DESC__ver_1_251003_2000 = '''
-    - 텍스트 검색(LineViewSearchDialog) 창에 전체검색 기능 추가
-    - 전체검색 버튼 클릭 시 TableView에 검색 결과(줄번호, 내용) 표시
-    - TableView row 더블클릭 시 lineView에서 해당 라인으로 이동
-    '''
+- 텍스트 검색(LineViewSearchDialog) 창에 전체검색 기능 추가
+- 전체검색 버튼 클릭 시 TableView에 검색 결과(줄번호, 내용) 표시
+- TableView row 더블클릭 시 lineView에서 해당 라인으로 이동
+'''
+
+    VER_INFO__ver_1_251004_1100 = "ver_1_251004_1100"
+    VER_DESC__ver_1_251004_1100 = '''
+- go to line 기능 추가
+'''
 
     def __init__(self):
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251003_2000, self.VER_DESC__ver_1_251003_2000
-
+        return self.VER_INFO__ver_1_251004_1100, self.VER_DESC__ver_1_251004_1100
 
 # ------------------------------ Global 변수 ------------------------------
 g_my_version_info = MyVersionHistory()
@@ -102,8 +103,8 @@ g_my_version_info = MyVersionHistory()
 gCurVerInfo, gCurVerDesc = g_my_version_info.get_version_info()
 
 g_pgm_name = 'AndyFinder'
-g_winsize_w = 1300
-g_winsize_h = 800
+g_win_size_w = 1300
+g_win_size_h = 800
 g_font_face = 'Arial'
 g_font_size = 8
 g_MIN_FONT_SIZE = 1
@@ -248,18 +249,18 @@ class LineViewSearchDialog(QtWidgets.QDialog):
         self.btn_next = QtWidgets.QPushButton("Next(F4)")
         self.btn_search_all = QtWidgets.QPushButton("전체검색")  # 추가
         self.btn_search_all.setStyleSheet("""
-                    QPushButton {
-                        background-color: blue4;
-                        color: #FFFFFF;
-                        border: 2px solid black;  /* 기본 border */
-                        font-weight: bold;
-                    }
-                    QPushButton:hover {
-                        color: white;
-                        font-weight: bold;
-                        border: 2px solid white;
-                    }
-                """)
+            QPushButton {
+                background-color: blue4;
+                color: #FFFFFF;
+                border: 2px solid black;  /* 기본 border */
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                color: white;
+                font-weight: bold;
+                border: 2px solid white;
+            }
+        """)
 
         self.btn_close = QtWidgets.QPushButton("닫기")
 
@@ -415,6 +416,85 @@ class LineViewSearchDialog(QtWidgets.QDialog):
         super().keyPressEvent(event)
 
 
+# ------------------------------ Go to Line 다이얼로그 ------------------------------
+
+class GoToLineDialog(QtWidgets.QDialog):
+    """Go to Line 다이얼로그"""
+
+    def __init__(self, editor, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Go to line")
+        self.setModal(True)
+        self.editor = editor
+        self.line_number = -1
+        self.setup_ui()
+
+    def setup_ui(self):
+        layout = QtWidgets.QVBoxLayout(self)
+
+        # 라벨과 입력창
+        form_layout = QtWidgets.QFormLayout()
+        self.edt_line = QtWidgets.QLineEdit()
+        self.edt_line.setPlaceholderText("줄 번호 입력...")
+
+        # 숫자만 입력 가능하도록
+        int_validator = QtGui.QIntValidator(1, 999999999, self)
+        self.edt_line.setValidator(int_validator)
+
+        form_layout.addRow("Go to line:", self.edt_line)
+        layout.addLayout(form_layout)
+
+        # 버튼들
+        btn_layout = QtWidgets.QHBoxLayout()
+        self.btn_ok = QtWidgets.QPushButton("OK")
+        self.btn_cancel = QtWidgets.QPushButton("Cancel")
+
+        btn_layout.addStretch()
+        self.btn_ok.setAutoDefault(False)  # ← 이 줄 추가
+        btn_layout.addWidget(self.btn_ok)
+        btn_layout.addWidget(self.btn_cancel)
+        layout.addLayout(btn_layout)
+
+        # 시그널
+        self.btn_ok.clicked.connect(self.on_ok)
+        self.btn_cancel.clicked.connect(self.reject)
+
+        self.resize(300, 120)
+        self.edt_line.setFocus()
+
+    def keyPressEvent(self, event):
+        """엔터키 처리를 위한 keyPressEvent 오버라이드"""
+        if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+            # 엔터키가 눌리면 on_ok 실행
+            self.on_ok()
+            event.accept()  # 이벤트 전파 방지
+            return
+        super().keyPressEvent(event)
+
+    def on_ok(self):
+        line_text = self.edt_line.text().strip()
+        if not line_text:
+            QtWidgets.QMessageBox.warning(self, "경고", "줄 번호를 입력하세요.")
+            return
+
+        try:
+            line_number = int(line_text)
+        except ValueError:
+            QtWidgets.QMessageBox.warning(self, "경고", "올바른 숫자를 입력하세요.")
+            return
+
+        # 범위 확인
+        total_lines = self.editor.document().blockCount()
+        if line_number < 1 or line_number > total_lines:
+            QtWidgets.QMessageBox.warning(
+                self, "경고",
+                f"줄 번호가 범위를 벗어났습니다.\n유효 범위: 1 ~ {total_lines}"
+            )
+            return
+
+        self.line_number = line_number
+        self.accept()
+
 # ------------------------------ 즐겨찾기 추가 다이얼로그 ------------------------------
 
 class FavoriteAddDialog(QtWidgets.QDialog):
@@ -556,7 +636,9 @@ class FavoriteDialog(QtWidgets.QDialog):
     def setup_ui(self):
         layout = QtWidgets.QVBoxLayout(self)
 
-        info_label = QtWidgets.QLabel("폴더/아이템을 더블클릭하거나, 버튼 또는 드래그앤드롭으로 관리할 수 있습니다.\n- 아이템을 폴더로 드래그하여 이동, 루트(바깥)로 드래그하여 루트로 이동할 수 있습니다.")
+        info_label = QtWidgets.QLabel("폴더/아이템을 더블클릭하거나, 버튼 또는 드래그앤드롭으로 관리할 수 있습니다." 
+                                      "\n" 
+                                      "- 아이템을 폴더로 드래그하여 이동, 루트(바깥)로 드래그하여 루트로 이동할 수 있습니다.")
         layout.addWidget(info_label)
 
         # 트리
@@ -1412,6 +1494,24 @@ class SearchWorker(QObject):
             self.failed.emit(str(e))
 
 
+class ResultSearchLineEdit(LongClickLineEdit):
+    """F3/F4로 결과 내 검색을 수행하는 LineEdit"""
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_F3:
+            parent = self.window()
+            if isinstance(parent, QtWidgets.QMainWindow):
+                parent.search_in_results_prev()
+                event.accept()
+                return
+        elif event.key() == Qt.Key_F4:
+            parent = self.window()
+            if isinstance(parent, QtWidgets.QMainWindow):
+                parent.search_in_results_next()
+                event.accept()
+                return
+        super().keyPressEvent(event)
+
 # ------------------------------ DragDropCodeEditor (내부 검색 지원) ------------------------------
 
 class DragDropCodeEditor(CodeEditor):
@@ -1586,6 +1686,12 @@ class DragDropCodeEditor(CodeEditor):
         return (self.internal_search_index + 1, len(self.internal_search_matches))
 
     def keyPressEvent(self, event):
+        # Ctrl+G: Go to Line
+        if event.key() == Qt.Key_G and event.modifiers() == Qt.ControlModifier:
+            self.show_goto_line_dialog()
+            event.accept()
+            return
+
         # Ctrl+1/2/3: 선택 텍스트를 지정 입력란에 추가
         if event.modifiers() == Qt.ControlModifier and event.key() in (Qt.Key_1, Qt.Key_2, Qt.Key_3):
             cursor = self.textCursor()
@@ -1641,6 +1747,11 @@ class DragDropCodeEditor(CodeEditor):
 
         super().keyPressEvent(event)
 
+    def show_goto_line_dialog(self):
+        """Go to Line 다이얼로그 표시"""
+        dialog = GoToLineDialog(self, self.window())
+        if dialog.exec() == QtWidgets.QDialog.Accepted and dialog.line_number > 0:
+            self.gotoLine(dialog.line_number)
 
 # ------------------------------ Drag 지원 TableView ------------------------------
 
@@ -1707,6 +1818,22 @@ class DragTableView(QtWidgets.QTableView):
             self.horizontalScrollBar().setValue(0)
             # 이벤트 루프 후에도 확실하게 설정
             QtCore.QTimer.singleShot(0, lambda: self.horizontalScrollBar().setValue(0))
+
+    def mouseDoubleClickEvent(self, event):
+        """더블클릭 이벤트 처리: 왼쪽/오른쪽 구분"""
+        if event.button() == Qt.LeftButton:
+            # 왼쪽 더블클릭: 기본 동작 (시그널 발생하여 lineView 이동만)
+            super().mouseDoubleClickEvent(event)
+        elif event.button() == Qt.RightButton:
+            # 오른쪽 더블클릭: 마킹 토글만 (lineView 이동 안함)
+            index = self.indexAt(event.pos())
+            if index.isValid():
+                main_window = self.window()
+                if hasattr(main_window, 'toggle_result_mark'):
+                    main_window.toggle_result_mark(index.row())
+            event.accept()
+        else:
+            super().mouseDoubleClickEvent(event)
 
     def mousePressEvent(self, event):
         # Shift + Right Click 으로 범위 선택 지원
@@ -1868,6 +1995,20 @@ class DragTableView(QtWidgets.QTableView):
                 parent = self.window()
                 if hasattr(parent, 'goto_next_marked_result_from_table'):
                     parent.goto_next_marked_result_from_table()
+            event.accept()
+            return
+
+        # F3/F4 처리 추가
+        if event.key() == Qt.Key_F3:
+            parent = self.window()
+            if hasattr(parent, 'search_in_results_prev'):
+                parent.search_in_results_prev()
+            event.accept()
+            return
+        elif event.key() == Qt.Key_F4:
+            parent = self.window()
+            if hasattr(parent, 'search_in_results_next'):
+                parent.search_in_results_next()
             event.accept()
             return
 
@@ -2043,7 +2184,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"{g_pgm_name} - {gCurVerInfo}")
-        self.resize(g_winsize_w, g_winsize_h)
+        self.resize(g_win_size_w, g_win_size_h)
 
         icon_path = self.resource_path(g_icon_name)
         if os.path.isfile(icon_path):
@@ -2241,7 +2382,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 font-weight: bold;
                 border: 2px solid red;
             }
-                """)
+        """)
 
         self.lbl_file = QtWidgets.QLabel("No file loaded yet!")
         self.lbl_file.setMinimumWidth(300)
@@ -2369,20 +2510,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.cmb_favorites.setToolTip("기본 검색어 즐겨찾기 항목 선택 (F5:로딩)")
         self.cmb_favorites.currentIndexChanged.connect(self.on_favorite_combobox_changed)
         self.cmb_favorites.setStyleSheet("""
-                    QComboBox {
-                        background-color: white;
-                        border: 1px solid black;
-                        padding: 4px;
-                        border-radius: 2px;
-                    }
-                    QComboBox:hover {
-                        border: 1px solid #0078D7;
-                    }
-                    QComboBox QAbstractItemView {
-                        background-color: white;
-                        selection-color: red;
-                    }   
-                """)
+            QComboBox {
+                background-color: white;
+                border: 1px solid black;
+                padding: 4px;
+                border-radius: 2px;
+            }
+            QComboBox:hover {
+                border: 1px solid #0078D7;
+            }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                selection-color: red;
+            }   
+        """)
 
         third_layout.addWidget(QtWidgets.QLabel("검색모드:"))
         third_layout.addWidget(self.cmb_mode)
@@ -2428,7 +2569,8 @@ class MainWindow(QtWidgets.QMainWindow):
         """)
         self.btn_result_search_fav.clicked.connect(self.show_result_search_favorites)
 
-        self.edt_result_search = LongClickLineEdit()
+        #self.edt_result_search = LongClickLineEdit()       # 삭제
+        self.edt_result_search = ResultSearchLineEdit()     # 변경
         self.edt_result_search.setPlaceholderText("검색 결과 내에서 검색...")
         self.edt_result_search.returnPressed.connect(self.search_in_results_next)
         self.edt_result_search.setStyleSheet("QLineEdit { background-color: #F0FFFF; }")
@@ -2545,6 +2687,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tblResults.setItemDelegateForColumn(1, NoWrapDelegate(self.tblResults))
         self.tblResults.setShowGrid(False)
 
+        # 초기 헤더 width 설정 (1번 컬럼: 검색결과)
+        header = self.tblResults.horizontalHeader()
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Interactive)
+        self.tblResults.setColumnWidth(1, 1300)
+
         self.resultsModel = ResultsModel()
         self.tblResults.setModel(self.resultsModel)
         self.tblResults.doubleClicked.connect(self.on_table_double_clicked)
@@ -2660,6 +2808,13 @@ class MainWindow(QtWidgets.QMainWindow):
             self.lbl_status.setText("")
             self.prog.setValue(0)
             self.tblResults.clearSelection()
+
+            # 헤더 width 초기화 추가
+            header = self.tblResults.horizontalHeader()
+            header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(1, QtWidgets.QHeaderView.Interactive)
+            self.tblResults.setColumnWidth(1, 1300)
+
             self.status.showMessage("All data cleared", 3000)
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "오류", f"초기화 중 오류: {e}")
@@ -2776,12 +2931,15 @@ class MainWindow(QtWidgets.QMainWindow):
             self.status.showMessage("이전 마킹된 항목이 없습니다", 2000)
 
     def on_table_double_clicked(self, index: QModelIndex):
-        """테이블 더블클릭: 마킹 토글 + 해당 라인으로 이동"""
-        row = index.row()
-        # 마킹 토글
-        self.resultsModel.toggle_mark(row)
-        # 기존의 이동 로직도 수행
+        """테이블 왼쪽 더블클릭: lineView로 이동만 (마킹 토글 제외)"""
         self.goto_result_from_table(index)
+
+    def toggle_result_mark(self, row: int):
+        """테이블 오른쪽 더블클릭: 마킹 토글만 (lineView 이동 안함)"""
+        if row < 0 or row >= self.resultsModel.rowCount():
+            return
+        self.resultsModel.toggle_mark(row)
+        self.status.showMessage(f"Row {row + 1} marking toggled", 2000)
 
     def goto_next_marked_result(self):
         """다음 마킹된 결과로 이동 (F2)"""
@@ -3304,10 +3462,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.apply_context_snippets_to_current_results()
         self.resultsModel.set_results(results)
 
-        # 헤더 리사이즈 모드: Stretch -> ResizeToContents (가로 스크롤 가능)
+        # 헤더 리사이즈 모드: 0번 컬럼은 ResizeToContents, 1번 컬럼은 800px로 설정
         header = self.tblResults.horizontalHeader()
         header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
+        self.tblResults.setColumnWidth(1, 1500)
 
         self.tblResults.resizeRowsToContents()
 
@@ -3359,27 +3518,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tblResults.scrollTo(tidx, QtWidgets.QAbstractItemView.PositionAtCenter)
 
     def update_all_highlights(self, result: Optional[SearchResult] = None):
-        # extraSelections = []
-        # extraSelections.extend(self.lineView.color_highlight_selections)
-        #
-        # if result:
-        #     lines = self.lineView.toPlainText().split('\n')
-        #     if result.line < len(lines):
-        #         line_text = lines[result.line]
-        #         line_start_pos = sum(len(lines[i]) + 1 for i in range(result.line))
-        #
-        #         for start, end in result.matches:
-        #             if start < len(line_text) and end <= len(line_text):
-        #                 selection = QtWidgets.QTextEdit.ExtraSelection()
-        #                 selection.format.setBackground(QtGui.QColor(102, 255, 255))
-        #
-        #                 cursor = QtGui.QTextCursor(self.lineView.document())
-        #                 cursor.setPosition(line_start_pos + start)
-        #                 cursor.setPosition(line_start_pos + end, QtGui.QTextCursor.KeepAnchor)
-        #                 selection.cursor = cursor
-        #                 extraSelections.append(selection)
-        #
-        # self.lineView.setExtraSelections(extraSelections)
         pass
 
     def highlight_search_results(self, result: SearchResult):
@@ -3457,6 +3595,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.lbl_result_search_status.setText("검색 결과가 없습니다")
             return
 
+        # 검색어가 바뀌면 매칭 리스트 재생성
         if query != self.result_search_query:
             self.result_search_query = query
             self.result_search_matches = []
@@ -3475,32 +3614,43 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.lbl_result_search_status.setText(f"정규식 오류: {e}")
                 return
 
-            self.result_search_index = -1
-
         if not self.result_search_matches:
             self.lbl_result_search_status.setText("일치하는 항목 없음")
             return
 
         is_recursive = self.chk_recursive_search.isChecked()
 
-        if self.result_search_index >= len(self.result_search_matches) - 1:
-            if is_recursive:
-                self.result_search_index = 0
+        # 현재 tblResults의 current active line을 기준으로 다음 매칭 찾기
+        current_row = self.tblResults.currentIndex().row()
+        if current_row < 0:
+            current_row = -1
+
+        # current_row보다 큰 첫 번째 매칭 찾기
+        next_match_idx = None
+        for idx in self.result_search_matches:
+            if idx > current_row:
+                next_match_idx = idx
+                break
+
+        if next_match_idx is None:
+            # 다음 매칭이 없으면
+            if is_recursive and self.result_search_matches:
+                next_match_idx = self.result_search_matches[0]
             else:
                 self.lbl_result_search_status.setText(
-                    f"{len(self.result_search_matches)} / {len(self.result_search_matches)} (마지막)"
+                    f"마지막 매칭 (전체 {len(self.result_search_matches)}개)"
                 )
                 return
-        else:
-            self.result_search_index += 1
 
-        row_index = self.result_search_matches[self.result_search_index]
-        self.current_result_index = row_index
-        result = self.current_results[row_index]
+        # 이동
+        self.current_result_index = next_match_idx
+        result = self.current_results[next_match_idx]
         self.goto_result(result)
 
+        # 현재 매칭의 순서 계산 (표시용)
+        match_position = self.result_search_matches.index(next_match_idx) + 1
         self.lbl_result_search_status.setText(
-            f"{self.result_search_index + 1} / {len(self.result_search_matches)}"
+            f"{match_position} / {len(self.result_search_matches)}"
         )
 
     def search_in_results_prev(self):
@@ -3512,6 +3662,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.lbl_result_search_status.setText("검색 결과가 없습니다")
             return
 
+        # 검색어가 바뀌면 매칭 리스트 재생성
         if query != self.result_search_query:
             self.result_search_query = query
             self.result_search_matches = []
@@ -3530,46 +3681,60 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.lbl_result_search_status.setText(f"정규식 오류: {e}")
                 return
 
-            self.result_search_index = len(self.result_search_matches)
-
         if not self.result_search_matches:
             self.lbl_result_search_status.setText("일치하는 항목 없음")
             return
 
         is_recursive = self.chk_recursive_search.isChecked()
 
-        if self.result_search_index <= 0:
-            if is_recursive:
-                self.result_search_index = len(self.result_search_matches) - 1
+        # 현재 tblResults의 current active line을 기준으로 이전 매칭 찾기
+        current_row = self.tblResults.currentIndex().row()
+        if current_row < 0:
+            current_row = len(self.current_results)
+
+        # current_row보다 작은 마지막 매칭 찾기
+        prev_match_idx = None
+        for idx in reversed(self.result_search_matches):
+            if idx < current_row:
+                prev_match_idx = idx
+                break
+
+        if prev_match_idx is None:
+            # 이전 매칭이 없으면
+            if is_recursive and self.result_search_matches:
+                prev_match_idx = self.result_search_matches[-1]
             else:
                 self.lbl_result_search_status.setText(
-                    f"1 / {len(self.result_search_matches)} (첫번째)"
+                    f"첫 번째 매칭 (전체 {len(self.result_search_matches)}개)"
                 )
                 return
-        else:
-            self.result_search_index -= 1
 
-        row_index = self.result_search_matches[self.result_search_index]
-        self.current_result_index = row_index
-        result = self.current_results[row_index]
+        # 이동
+        self.current_result_index = prev_match_idx
+        result = self.current_results[prev_match_idx]
         self.goto_result(result)
 
+        # 현재 매칭의 순서 계산 (표시용)
+        match_position = self.result_search_matches.index(prev_match_idx) + 1
         self.lbl_result_search_status.setText(
-            f"{self.result_search_index + 1} / {len(self.result_search_matches)}"
+            f"{match_position} / {len(self.result_search_matches)}"
         )
 
     def keyPressEvent(self, event):
+        # lineView에 포커스가 있고 search_dialog가 열려있으면 lineView의 검색이 처리
         if self.lineView.hasFocus() and self.lineView.search_dialog and self.lineView.search_dialog.isVisible():
             return
 
-        if event.key() == Qt.Key_F3:
-            self.search_in_results_prev()
-            event.accept()
-            return
-        elif event.key() == Qt.Key_F4:
-            self.search_in_results_next()
-            event.accept()
-            return
+        # edt_result_search나 tblResults에 포커스가 있을 때만 F3/F4 처리
+        if self.edt_result_search.hasFocus() or self.tblResults.hasFocus():
+            if event.key() == Qt.Key_F3:
+                self.search_in_results_prev()
+                event.accept()
+                return
+            elif event.key() == Qt.Key_F4:
+                self.search_in_results_next()
+                event.accept()
+                return
 
         super().keyPressEvent(event)
 
