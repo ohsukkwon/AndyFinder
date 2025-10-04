@@ -34,78 +34,19 @@ class MyVersionHistory:
 13. tblResults LineNumber를 lineView LineNumber로 Drag&Drop하여 범위 복사 기능 추가.
 14. 즐겨찾기 Category(폴더 구조) 지원: 세 가지 즐겨찾기(기본 검색어/결과내 검색/Color 키워드)에 폴더 생성/이동/선택 기능 추가.
 '''
-    VER_INFO__ver_1_251001_0927 = "ver_1_251001_0927"
-    VER_DESC__ver_1_251001_0927 = '''
-1. 즐겨찾기 Add 입력방식 개선 : 문자열이 있는 경우 값에 표시하고, 이름을 입력받도록 개선
-'''
-    VER_INFO__ver_1_251001_1300 = "ver_1_251001_1300"
-    VER_DESC__ver_1_251001_1300 = '''
-- 파일 메뉴에 "All data clear" 메뉴 추가: lineView, tblResults, lbl_status 등 로드된 파일 관련 정보를 초기화합니다.
-- lineView에 포커스가 있을 때 Ctrl + Mouse Wheel로 글꼴 크기 조절 시, 라인 번호 영역(LineNumberArea)도 동일하게 폰트 크기가 연동되도록 수정:
-- CodeEditor.setFont을 오버라이드하여 에디터와 라인 번호 영역의 폰트를 동기화.
-- zoomIn/zoomOut에서도 LineNumberArea 폰트를 동기화하고, 너비를 재계산하도록 처리.
-- wheelEvent는 lineView에 포커스가 있고 Ctrl이 눌린 경우에만 확대/축소 수행.
-'''
-    VER_INFO__ver_1_251001_1500 = "ver_1_251001_1500"
-    VER_DESC__ver_1_251001_1500 = '''
-- MainWindow에 latest_config 관련 메서드 추가: latest_config_file_path, build_latest_config, apply_latest_config, save_latest_config, load_latest_config
-- 프로그램 시작 시 load_latest_config() 호출
-- 종료 시 closeEvent에서 save_latest_config() 호출 (파일 저장 여부와 무관하게 종료 확정 시 항상 저장)
-- 저장 항목: query, search_mode, case_sensitive, result_search, color_keywords, recursive_search, prev_lines, next_lines, lineView_font_pt, tblResults_font_pt, always_on_top
-'''
-
-    VER_INFO__ver_1_251001_1600 = "ver_1_251001_1600"
-    VER_DESC__ver_1_251001_1600 = '''
-- prog(QProgressBar) 우측에 dropbox(QComboBox) 추가
-- dropbox에 "기본 검색어 즐겨찾기" 항목을 category 구분하여 모든 favorite 항목의 이름 표시
-- dropbox의 세부 항목 이름이 전체가 보이도록 충분한 width 설정
-- 이름 위에 마우스 over 시 값의 내용이 툴팁으로 표시
-- dropbox에서 항목 선택 후 F5 누르면 선택된 favorite 값을 edt_query에 로딩하고 포커스 설정
-'''
-
-    VER_INFO__ver_1_251001_1700 = "ver_1_251001_1700"
-    VER_DESC__ver_1_251001_1700 = '''
-- 파일 로딩 시 소요 시간을 lbl_status에 "Loading duration : xx sec(s)" 형식으로 표시
-- 검색 시 소요 시간을 검색 결과 옆에 "Searching duration : xx sec(s)" 형식으로 표시
-'''
-
-    VER_INFO__ver_1_251002_1426 = "ver_1_251002_1426"
-    VER_DESC__ver_1_251002_1426 = '''
-- 행 선택 시 가로 스크롤을 첫 번째 컬럼으로 이동
-'''
-
-    VER_INFO__ver_1_251003_1530 = "ver_1_251003_1530"
-    VER_DESC__ver_1_251003_1530 = '''
-- 텍스트 검색(LineViewSearchDialog) 창에서 F5로 재검색 기능 추가
-'''
-
-    VER_INFO__ver_1_251003_2000 = "ver_1_251003_2000"
-    VER_DESC__ver_1_251003_2000 = '''
-- 텍스트 검색(LineViewSearchDialog) 창에 전체검색 기능 추가
-- 전체검색 버튼 클릭 시 TableView에 검색 결과(줄번호, 내용) 표시
-- TableView row 더블클릭 시 lineView에서 해당 라인으로 이동
-'''
-
-    VER_INFO__ver_1_251004_1100 = "ver_1_251004_1100"
-    VER_DESC__ver_1_251004_1100 = '''
-- go to line 기능 추가
-'''
-
-    VER_INFO__ver_1_251004_1800 = "ver_1_251004_1800"
-    VER_DESC__ver_1_251004_1800 = '''
-- lineView 와 lineView_clone의 current active line 의 background color 값 bug 수정
-'''
-    VER_INFO__ver_1_251004_1930 = "ver_1_251004_1930"
-    VER_DESC__ver_1_251004_1930 = '''
-- Multi Tab 파일 추가(대용량 파일을 loading 할 경우 속도 이슈 있음)
-- Highlight Color 설정 bug 수정
+    VER_INFO__ver_1_251005_0000 = "ver_1_251005_0000"
+    VER_DESC__ver_1_251005_0000 = '''
+- Multiple Tab UI 지원 (최대 3개 탭)
+- 각 탭별 독립적인 설정 및 상태 관리
+- 탭별 색상 구분 (Tab#1: 빨강, Tab#2: 주황, Tab#3: 노랑)
+- Focus 상태에 따른 탭 색상 변경
 '''
 
     def __init__(self):
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251004_1930, self.VER_DESC__ver_1_251004_1930
+        return self.VER_INFO__ver_1_251005_0000, self.VER_DESC__ver_1_251005_0000
 
 
 # ------------------------------ Global 변수 ------------------------------
@@ -179,10 +120,10 @@ class QueryLineEdit(LongClickLineEdit):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_F5:
-            # 부모 윈도우의 do_search 호출
+            # 부모에서 TabContent 찾기
             parent = self.parent()
             while parent:
-                if isinstance(parent, QtWidgets.QMainWindow):
+                if hasattr(parent, 'do_search'):
                     parent.do_search()
                     event.accept()
                     return
@@ -195,10 +136,10 @@ class ColorKeywordsLineEdit(LongClickLineEdit):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_F5:
-            # 부모 윈도우의 on_color_settings_clicked 호출
+            # 부모에서 TabContent 찾기
             parent = self.parent()
             while parent:
-                if isinstance(parent, QtWidgets.QMainWindow):
+                if hasattr(parent, 'on_color_settings_clicked'):
                     parent.on_color_settings_clicked()
                     event.accept()
                     return
@@ -215,7 +156,7 @@ class FavoriteComboBox(QtWidgets.QComboBox):
         if event.key() == Qt.Key_F5:
             parent = self.parent()
             while parent:
-                if isinstance(parent, QtWidgets.QMainWindow):
+                if hasattr(parent, 'load_favorite_from_combobox'):
                     parent.load_favorite_from_combobox()
                     event.accept()
                     return
@@ -228,7 +169,7 @@ class FavoriteComboBox(QtWidgets.QComboBox):
 class LineViewSearchDialog(QtWidgets.QDialog):
     """lineView 내부 검색 다이얼로그 (Modeless + 전체검색 기능)"""
 
-    def __init__(self, editor, parent=None, viewer_name=""):  # viewer_name 파라미터 추가
+    def __init__(self, editor, parent=None, viewer_name=""):
         super().__init__(parent)
         # viewer_name에 따라 제목 설정
         if viewer_name == "left":
@@ -445,7 +386,6 @@ class LineViewSearchDialog(QtWidgets.QDialog):
         result = self.editor.search_prev(pattern, recursive)
         self.update_status(result)
 
-    # 추가: F5 키로 재검색 수행
     def on_refresh_search(self):
         """F5: 현재 검색어로 처음부터 다시 검색"""
         pattern = self.edt_search.text().strip()
@@ -479,7 +419,7 @@ class LineViewSearchDialog(QtWidgets.QDialog):
             self.on_search_next()
             event.accept()
             return
-        elif event.key() == Qt.Key_F5:  # 추가: F5 키 처리
+        elif event.key() == Qt.Key_F5:
             self.on_refresh_search()
             event.accept()
             return
@@ -1218,10 +1158,12 @@ class LineNumberArea(QtWidgets.QWidget):
                         bottom = top + self.codeEditor.blockBoundingRect(block).height()
 
                     if target_line_number > 0:
-                        # MainWindow의 복사 메서드 호출
-                        main_window = self.codeEditor.window()
-                        if hasattr(main_window, 'copy_lines_between'):
-                            main_window.copy_lines_between(source_line_number, target_line_number)
+                        # TabContent의 복사 메서드 호출
+                        tab_content = self.codeEditor.parent()
+                        while tab_content and not isinstance(tab_content, TabContent):
+                            tab_content = tab_content.parent()
+                        if tab_content and hasattr(tab_content, 'copy_lines_between'):
+                            tab_content.copy_lines_between(source_line_number, target_line_number)
                         event.acceptProposedAction()
                     else:
                         event.ignore()
@@ -1596,17 +1538,21 @@ class ResultSearchLineEdit(LongClickLineEdit):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_F3:
-            parent = self.window()
-            if isinstance(parent, QtWidgets.QMainWindow):
-                parent.search_in_results_prev()
-                event.accept()
-                return
+            parent = self.parent()
+            while parent:
+                if hasattr(parent, 'search_in_results_prev'):
+                    parent.search_in_results_prev()
+                    event.accept()
+                    return
+                parent = parent.parent()
         elif event.key() == Qt.Key_F4:
-            parent = self.window()
-            if isinstance(parent, QtWidgets.QMainWindow):
-                parent.search_in_results_next()
-                event.accept()
-                return
+            parent = self.parent()
+            while parent:
+                if hasattr(parent, 'search_in_results_next'):
+                    parent.search_in_results_next()
+                    event.accept()
+                    return
+                parent = parent.parent()
         super().keyPressEvent(event)
 
 
@@ -1651,16 +1597,21 @@ class DragDropCodeEditor(CodeEditor):
     def show_search_dialog(self):
         """검색 다이얼로그 표시 (선택된 텍스트를 검색어로 사용)"""
         if self.search_dialog is None:
-            # viewer_name 결정: MainWindow에서 lineView인지 lineView_clone인지 확인
+            # viewer_name 결정: TabContent에서 lineView인지 lineView_clone인지 확인
             viewer_name = ""
-            main_window = self.window()
-            if hasattr(main_window, 'lineView') and hasattr(main_window, 'lineView_clone'):
-                if self is main_window.lineView:
+            tab_content = self.parent()
+            while tab_content and not isinstance(tab_content, TabContent):
+                tab_content = tab_content.parent()
+
+            if tab_content and hasattr(tab_content, 'lineView') and hasattr(tab_content, 'lineView_clone'):
+                if self is tab_content.lineView:
                     viewer_name = "left"
-                elif self is main_window.lineView_clone:
+                elif self is tab_content.lineView_clone:
                     viewer_name = "right"
 
-            self.search_dialog = LineViewSearchDialog(self, self.window(), viewer_name)
+            # 부모를 TabContent로 설정
+            parent_widget = tab_content if tab_content else self.window()
+            self.search_dialog = LineViewSearchDialog(self, parent_widget, viewer_name)
 
         # 선택된 텍스트 확인
         cursor = self.textCursor()
@@ -1804,21 +1755,23 @@ class DragDropCodeEditor(CodeEditor):
             cursor = self.textCursor()
             if cursor.hasSelection():
                 selected_text = cursor.selectedText().replace('\u2029', '\n')
-                mw = self.window()
-                if hasattr(mw, 'append_text_to_lineedit'):
-                    if event.key() == Qt.Key_1 and hasattr(mw, 'edt_query'):
-                        mw.append_text_to_lineedit(mw.edt_query, selected_text)
-                        mw.edt_query.setFocus()
+                tab_content = self.parent()
+                while tab_content and not isinstance(tab_content, TabContent):
+                    tab_content = tab_content.parent()
+                if tab_content and hasattr(tab_content, 'append_text_to_lineedit'):
+                    if event.key() == Qt.Key_1 and hasattr(tab_content, 'edt_query'):
+                        tab_content.append_text_to_lineedit(tab_content.edt_query, selected_text)
+                        tab_content.edt_query.setFocus()
                         event.accept()
                         return
-                    elif event.key() == Qt.Key_2 and hasattr(mw, 'edt_result_search'):
-                        mw.append_text_to_lineedit(mw.edt_result_search, selected_text)
-                        mw.edt_result_search.setFocus()
+                    elif event.key() == Qt.Key_2 and hasattr(tab_content, 'edt_result_search'):
+                        tab_content.append_text_to_lineedit(tab_content.edt_result_search, selected_text)
+                        tab_content.edt_result_search.setFocus()
                         event.accept()
                         return
-                    elif event.key() == Qt.Key_3 and hasattr(mw, 'edt_color_keywords'):
-                        mw.append_text_to_lineedit(mw.edt_color_keywords, selected_text)
-                        mw.edt_color_keywords.setFocus()
+                    elif event.key() == Qt.Key_3 and hasattr(tab_content, 'edt_color_keywords'):
+                        tab_content.append_text_to_lineedit(tab_content.edt_color_keywords, selected_text)
+                        tab_content.edt_color_keywords.setFocus()
                         event.accept()
                         return
 
@@ -1851,7 +1804,13 @@ class DragDropCodeEditor(CodeEditor):
 
     def show_goto_line_dialog(self):
         """Go to Line 다이얼로그 표시"""
-        dialog = GoToLineDialog(self, self.window())
+        # 부모를 TabContent로 설정
+        tab_content = self.parent()
+        while tab_content and not isinstance(tab_content, TabContent):
+            tab_content = tab_content.parent()
+
+        parent_widget = tab_content if tab_content else self.window()
+        dialog = GoToLineDialog(self, parent_widget)
         if dialog.exec() == QtWidgets.QDialog.Accepted and dialog.line_number > 0:
             self.gotoLine(dialog.line_number)
 
@@ -1931,9 +1890,11 @@ class DragTableView(QtWidgets.QTableView):
             # 오른쪽 더블클릭: 마킹 토글만 (lineView 이동 안함)
             index = self.indexAt(event.pos())
             if index.isValid():
-                main_window = self.window()
-                if hasattr(main_window, 'toggle_result_mark'):
-                    main_window.toggle_result_mark(index.row())
+                tab_content = self.parent()
+                while tab_content and not isinstance(tab_content, TabContent):
+                    tab_content = tab_content.parent()
+                if tab_content and hasattr(tab_content, 'toggle_result_mark'):
+                    tab_content.toggle_result_mark(index.row())
             event.accept()
         else:
             super().mouseDoubleClickEvent(event)
@@ -2088,30 +2049,42 @@ class DragTableView(QtWidgets.QTableView):
         # tblResults에 focus가 있을 때 F2/Shift+F2로 마킹된 row 이동
         if self.hasFocus() and event.key() == Qt.Key_F2:
             if event.modifiers() == Qt.ShiftModifier:
-                parent = self.window()
-                if hasattr(parent, 'goto_prev_marked_result_from_table'):
-                    parent.goto_prev_marked_result_from_table()
+                parent = self.parent()
+                while parent:
+                    if hasattr(parent, 'goto_prev_marked_result_from_table'):
+                        parent.goto_prev_marked_result_from_table()
+                        event.accept()
+                        return
+                    parent = parent.parent()
             else:
-                parent = self.window()
-                if hasattr(parent, 'goto_next_marked_result_from_table'):
-                    parent.goto_next_marked_result_from_table()
+                parent = self.parent()
+                while parent:
+                    if hasattr(parent, 'goto_next_marked_result_from_table'):
+                        parent.goto_next_marked_result_from_table()
+                        event.accept()
+                        return
+                    parent = parent.parent()
             event.accept()
             return
 
         # F3/F4 처리 추가 (focus가 있을 때만)
         if self.hasFocus():
             if event.key() == Qt.Key_F3:
-                parent = self.window()
-                if hasattr(parent, 'search_in_results_prev'):
-                    parent.search_in_results_prev()
-                event.accept()
-                return
+                parent = self.parent()
+                while parent:
+                    if hasattr(parent, 'search_in_results_prev'):
+                        parent.search_in_results_prev()
+                        event.accept()
+                        return
+                    parent = parent.parent()
             elif event.key() == Qt.Key_F4:
-                parent = self.window()
-                if hasattr(parent, 'search_in_results_next'):
-                    parent.search_in_results_next()
-                event.accept()
-                return
+                parent = self.parent()
+                while parent:
+                    if hasattr(parent, 'search_in_results_next'):
+                        parent.search_in_results_next()
+                        event.accept()
+                        return
+                    parent = parent.parent()
 
         # Ctrl+C 복사, Ctrl+A 전체 선택 (focus가 있을 때만)
         if self.hasFocus():
@@ -2273,24 +2246,14 @@ class ResultsModel(QtCore.QAbstractTableModel):
         return self.rows[row]
 
 
-# ------------------------------ 메인 윈도우 ------------------------------
+# ------------------------------ Tab Content (기존 MainWindow의 UI 부분) ------------------------------
 
-class MainWindow(QtWidgets.QMainWindow):
-    def resource_path(self, relpath):
-        try:
-            abspath = sys._MEIPASS
-        except Exception:
-            abspath = os.path.abspath(".")
-        return os.path.join(abspath, relpath)
+class TabContent(QtWidgets.QWidget):
+    """각 탭의 컨텐츠를 담당하는 위젯"""
 
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle(f"{g_pgm_name} - {gCurVerInfo}")
-        self.resize(g_win_size_w, g_win_size_h)
-
-        icon_path = self.resource_path(g_icon_name)
-        if os.path.isfile(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
+    def __init__(self, tab_number: int, parent=None):
+        super().__init__(parent)
+        self.tab_number = tab_number
 
         # 상태
         self.content: str = ""
@@ -2309,10 +2272,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.result_search_matches: List[int] = []
 
         self.color_keywords: List[Tuple[str, QtGui.QColor]] = []
-
-        # F11 전체화면 토글용 상태 저장
-        self._previous_window_state = Qt.WindowNoState
-        self._previous_geometry = None
 
         # 50가지 색상 팔레트
         self.color_palette = [
@@ -2335,117 +2294,7 @@ class MainWindow(QtWidgets.QMainWindow):
             QtGui.QColor(255, 235, 210), QtGui.QColor(235, 210, 255),
         ]
 
-        self._create_menus()
         self._build_ui()
-
-        # 시작 시 최신 설정 로드
-        try:
-            self.load_latest_config()
-        except Exception:
-            pass
-
-        # lineView_clone 초기 highlight 설정
-        self.highlight_current_line_clone()
-
-    def _create_menus(self):
-        menubar = self.menuBar()
-
-        # 파일 메뉴
-        file_menu = menubar.addMenu('파일(&F)')
-
-        open_action = QtGui.QAction('열기(&O)', self)
-        open_action.setShortcut('Ctrl+O')
-        open_action.triggered.connect(self.open_file)
-        file_menu.addAction(open_action)
-
-        save_action = QtGui.QAction('저장(&S)', self)
-        save_action.setShortcut('Ctrl+S')
-        save_action.triggered.connect(self.save_file)
-        file_menu.addAction(save_action)
-
-        file_menu.addSeparator()
-
-        # 설정 저장/불러오기
-        save_config_action = QtGui.QAction('설정 저장(&C)', self)
-        save_config_action.setShortcut('Ctrl+Shift+S')
-        save_config_action.triggered.connect(self.save_config)
-        file_menu.addAction(save_config_action)
-
-        load_config_action = QtGui.QAction('설정 불러오기(&L)', self)
-        load_config_action.setShortcut('Ctrl+Shift+O')
-        load_config_action.triggered.connect(self.load_config)
-        file_menu.addAction(load_config_action)
-
-        file_menu.addSeparator()
-
-        # All data clear 추가
-        all_clear_action = QtGui.QAction('All data clear', self)
-        all_clear_action.setStatusTip('로드된 파일 및 관련 표시들을 초기화합니다')
-        all_clear_action.triggered.connect(self.all_data_clear)
-        file_menu.addAction(all_clear_action)
-
-        file_menu.addSeparator()
-
-        exit_action = QtGui.QAction('종료(&X)', self)
-        exit_action.setShortcut('Ctrl+Q')
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
-
-        # 보기 메뉴
-        view_menu = menubar.addMenu('보기(&V)')
-
-        self.always_on_top_action = QtGui.QAction('항상위(&A)', self)
-        self.always_on_top_action.setCheckable(True)
-        self.always_on_top_action.toggled.connect(self.toggle_always_on_top)
-        view_menu.addAction(self.always_on_top_action)
-
-        # Tools 메뉴
-        tools_menu = menubar.addMenu('Tools(&T)')
-
-        open_folder_action = QtGui.QAction('Loaded 파일위치 열기(&O)', self)
-        open_folder_action.triggered.connect(self.open_loaded_file_folder)
-        tools_menu.addAction(open_folder_action)
-
-        # 도움말 메뉴
-        help_menu = menubar.addMenu('도움말(&H)')
-
-        about_action = QtGui.QAction('정보(&A)', self)
-        about_action.triggered.connect(self.show_about)
-        help_menu.addAction(about_action)
-
-    def toggle_always_on_top(self, checked: bool):
-        self.setWindowFlag(Qt.WindowStaysOnTopHint, checked)
-        self.show()
-
-    def open_loaded_file_folder(self):
-        """로드된 파일이 존재하는 폴더를 탐색기로 열기"""
-        if not self.current_file_path:
-            QtWidgets.QMessageBox.information(self, "안내", "로드된 파일이 없습니다.")
-            return
-
-        if not os.path.exists(self.current_file_path):
-            QtWidgets.QMessageBox.warning(self, "경고", "파일이 존재하지 않습니다.")
-            return
-
-        folder_path = os.path.dirname(os.path.abspath(self.current_file_path))
-
-        try:
-            if sys.platform == 'win32':
-                os.startfile(folder_path)
-            elif sys.platform == 'darwin':
-                subprocess.Popen(['open', folder_path])
-            else:  # linux
-                subprocess.Popen(['xdg-open', folder_path])
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "오류", f"폴더 열기 실패: {e}")
-
-    def show_about(self):
-        QtWidgets.QMessageBox.about(
-            self,
-            "♣ Andy Finder Program ♣",
-            f"Andy Finder : {gCurVerInfo}\n\n"
-            "(dumpstate) This tool can find and analyse a (dumpstate)file."
-        )
 
     def _build_ui(self):
         top_widget = QtWidgets.QWidget()
@@ -2460,7 +2309,6 @@ class MainWindow(QtWidgets.QMainWindow):
         first_layout.setSpacing(8)
 
         self.btn_open = QtWidgets.QPushButton("Open file...")
-
         self.btn_open.setFixedWidth(120)
         self.btn_open.setStyleSheet("""
             QPushButton {
@@ -2753,7 +2601,6 @@ class MainWindow(QtWidgets.QMainWindow):
             }
         """)
 
-        # ========== 요청사항 1, 2: lineView와 lineView_clone 컨테이너 구성 ==========
         # lineView와 lineView_clone을 가로 splitter로 배치
         splitter_horizontal = QtWidgets.QSplitter()
         splitter_horizontal.setOrientation(Qt.Horizontal)
@@ -2777,7 +2624,7 @@ class MainWindow(QtWidgets.QMainWindow):
         lineView_layout.setContentsMargins(0, 0, 0, 0)
         lineView_layout.setSpacing(0)
 
-        # 요청사항 1: 노란색 위젯 (lineView 상단)
+        # 노란색 위젯 (lineView 상단)
         lineView_indicator = QtWidgets.QWidget()
         lineView_indicator.setFixedWidth(10)
         lineView_indicator.setFixedHeight(10)
@@ -2799,7 +2646,7 @@ class MainWindow(QtWidgets.QMainWindow):
         lineView_clone_layout.setContentsMargins(0, 0, 0, 0)
         lineView_clone_layout.setSpacing(0)
 
-        # 요청사항 1: 파란색 위젯 (lineView_clone 상단)
+        # 파란색 위젯 (lineView_clone 상단)
         lineView_clone_indicator = QtWidgets.QWidget()
         lineView_clone_indicator.setFixedWidth(10)
         lineView_clone_indicator.setFixedHeight(10)
@@ -2820,7 +2667,7 @@ class MainWindow(QtWidgets.QMainWindow):
         splitter_horizontal.addWidget(lineView_container)
         splitter_horizontal.addWidget(lineView_clone_container)
 
-        # 요청사항 2: 초기 비율 99:1 설정
+        # 초기 비율 95:5 설정
         splitter_horizontal.setSizes([9990, 10])
 
         # tblResults
@@ -2853,18 +2700,20 @@ class MainWindow(QtWidgets.QMainWindow):
         splitter_vertical.setStretchFactor(1, 1)
 
         # 상태바
-        self.status = QtWidgets.QStatusBar()
+        self.status_widget = QtWidgets.QWidget()
+        status_layout = QtWidgets.QHBoxLayout(self.status_widget)
+        status_layout.setContentsMargins(0, 0, 0, 0)
+
         self.lbl_status = QtWidgets.QLabel("")
-        self.status.addWidget(self.lbl_status)
-        self.setStatusBar(self.status)
+        status_layout.addWidget(self.lbl_status, 1)
 
         # 우측: 폰트 사이즈 라벨
         self.lable_lineView = QtWidgets.QLabel("")
         self.lable_tblResults = QtWidgets.QLabel("")
         self.lable_lineView.setStyleSheet("color: #404040;")
         self.lable_tblResults.setStyleSheet("color: #404040;")
-        self.status.addPermanentWidget(self.lable_lineView)
-        self.status.addPermanentWidget(self.lable_tblResults)
+        status_layout.addWidget(self.lable_lineView)
+        status_layout.addWidget(self.lable_tblResults)
 
         # 초기 폰트 사이즈 표시
         self.update_lineview_font_label(self.lineView.font().pointSize())
@@ -2876,12 +2725,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tblResults.fontSizeChanged.connect(self.update_tbl_font_label)
 
         # 중앙 위젯 구성
-        central = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout(central)
+        layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(top_widget)
         layout.addWidget(splitter_vertical, 1)
-        self.setCentralWidget(central)
+        layout.addWidget(self.status_widget)
 
         # 시그널
         self.btn_open.clicked.connect(self.open_file)
@@ -2895,7 +2743,14 @@ class MainWindow(QtWidgets.QMainWindow):
         # 즐겨찾기 콤보박스 초기 로딩
         self.refresh_favorite_combobox()
 
-    # ---------------- 즐겨찾기 콤보박스 관련 메서드 ----------------
+    # 폰트 라벨 업데이트
+    def update_lineview_font_label(self, size: int):
+        self.lable_lineView.setText(f"상단창: {size}pt")
+
+    def update_tbl_font_label(self, size: int):
+        self.lable_tblResults.setText(f"하단창: {size}pt")
+
+    # 즐겨찾기 콤보박스 관련
     def refresh_favorite_combobox(self):
         """즐겨찾기 JSON 파일을 읽어서 cmb_favorites를 category별로 구성"""
         json_path = "./fav/edit_query.json"
@@ -2943,13 +2798,12 @@ class MainWindow(QtWidgets.QMainWindow):
         if value:
             self.edt_query.setText(value)
             self.edt_query.setFocus()
-            self.status.showMessage("즐겨찾기 항목이 로드되었습니다.", 2000)
+            self.show_status_message("즐겨찾기 항목이 로드되었습니다.", 2000)
         else:
             QtWidgets.QMessageBox.warning(self, "경고", "선택한 항목의 값이 없습니다.")
 
     def highlight_current_line(self):
         extra_selections = []
-        # color_highlight_selections 포함 (이 줄 추가)
         extra_selections.extend(self.lineView.color_highlight_selections)
 
         if not self.lineView.isReadOnly():
@@ -2982,38 +2836,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.lineView_clone.setExtraSelections(extraSelections)
 
-    # ---------------- All data clear ----------------
-    def all_data_clear(self):
-        """로드된 파일 및 관련 표시를 모두 초기화"""
-        try:
-            # 검색 중이면 중지
-            self.stop_search()
-            # 현재 파일/결과/상태 초기화
-            self.close_current_file()
-            # 파일 라벨/상태/프로그레스/테이블 선택 초기화
-            self.lbl_file.setText("파일 없음")
-            self.lbl_status.setText("")
-            self.prog.setValue(0)
-            self.tblResults.clearSelection()
+    def show_status_message(self, message: str, timeout: int = 0):
+        """상태바 메시지 표시"""
+        main_window = self.window()
+        if isinstance(main_window, MainWindow):
+            main_window.statusBar().showMessage(message, timeout)
 
-            # 헤더 width 초기화
-            header = self.tblResults.horizontalHeader()
-            header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
-            header.setSectionResizeMode(1, QtWidgets.QHeaderView.Interactive)
-            self.tblResults.setColumnWidth(1, 1300)
-
-            self.status.showMessage("All data cleared", 3000)
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "오류", f"초기화 중 오류: {e}")
-
-    # ---------------- 우측 하단 폰트 라벨 업데이트 ----------------
-    def update_lineview_font_label(self, size: int):
-        self.lable_lineView.setText(f"상단창: {size}pt")
-
-    def update_tbl_font_label(self, size: int):
-        self.lable_tblResults.setText(f"하단창: {size}pt")
-
-    # ---------------- 유틸: 선택문자열을 지정 LineEdit에 추가 ----------------
     def append_text_to_lineedit(self, lineedit: QtWidgets.QLineEdit, text: str):
         """
         - 대상 LineEdit에 현재 문자열이 없으면 text로 교체
@@ -3029,7 +2857,6 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 lineedit.setText(current + '|' + text)
 
-    # ---------------- 라인 복사 기능 추가 ----------------
     def copy_lines_between(self, line1: int, line2: int):
         """두 라인 번호 사이의 내용을 클립보드에 복사"""
         if line1 == line2:
@@ -3056,16 +2883,16 @@ class MainWindow(QtWidgets.QMainWindow):
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(selected_text)
 
-        self.status.showMessage(
+        self.show_status_message(
             f"라인 {start_line}~{end_line} 복사됨 ({len(selected_lines)}줄)",
             3000
         )
 
-    # ---------------- 마킹 관련 메서드 추가 ----------------
+    # 마킹 관련 메서드
     def goto_next_marked_result_from_table(self):
         """tblResults에서 F2: 다음 마킹된 결과로 이동"""
         if not self.resultsModel.marked_rows:
-            self.status.showMessage("마킹된 항목이 없습니다", 2000)
+            self.show_status_message("마킹된 항목이 없습니다", 2000)
             return
 
         current_row = self.tblResults.currentIndex().row()
@@ -3085,12 +2912,12 @@ class MainWindow(QtWidgets.QMainWindow):
             # focus는 tblResults로 다시 설정
             self.tblResults.setFocus()
         else:
-            self.status.showMessage("다음 마킹된 항목이 없습니다", 2000)
+            self.show_status_message("다음 마킹된 항목이 없습니다", 2000)
 
     def goto_prev_marked_result_from_table(self):
         """tblResults에서 Shift+F2: 이전 마킹된 결과로 이동"""
         if not self.resultsModel.marked_rows:
-            self.status.showMessage("마킹된 항목이 없습니다", 2000)
+            self.show_status_message("마킹된 항목이 없습니다", 2000)
             return
 
         current_row = self.tblResults.currentIndex().row()
@@ -3113,7 +2940,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # focus는 tblResults로 다시 설정
             self.tblResults.setFocus()
         else:
-            self.status.showMessage("이전 마킹된 항목이 없습니다", 2000)
+            self.show_status_message("이전 마킹된 항목이 없습니다", 2000)
 
     def on_table_double_clicked(self, index: QModelIndex):
         """테이블 왼쪽 더블클릭: lineView로 이동만"""
@@ -3124,46 +2951,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if row < 0 or row >= self.resultsModel.rowCount():
             return
         self.resultsModel.toggle_mark(row)
-        self.status.showMessage(f"Row {row + 1} marking toggled", 2000)
+        self.show_status_message(f"Row {row + 1} marking toggled", 2000)
 
-    def goto_next_marked_result(self):
-        """다음 마킹된 결과로 이동 (F2)"""
-        if not self.resultsModel.marked_rows:
-            self.status.showMessage("마킹된 항목이 없습니다", 2000)
-            return
-
-        current_row = self.tblResults.currentIndex().row()
-        next_row = self.resultsModel.get_next_marked_row(current_row if current_row is not None else -1)
-
-        if next_row >= 0:
-            index = self.resultsModel.index(next_row, 0)
-            self.tblResults.setCurrentIndex(index)
-            self.tblResults.scrollTo(index, QtWidgets.QAbstractItemView.PositionAtCenter)
-            self.goto_result_from_table(index)
-        else:
-            self.status.showMessage("다음 마킹된 항목이 없습니다", 2000)
-
-    def goto_prev_marked_result(self):
-        """이전 마킹된 결과로 이동 (Shift+F2)"""
-        if not self.resultsModel.marked_rows:
-            self.status.showMessage("마킹된 항목이 없습니다", 2000)
-            return
-
-        current_row = self.tblResults.currentIndex().row()
-        if current_row is None or current_row < 0:
-            prev_row = max(self.resultsModel.marked_rows) if self.resultsModel.marked_rows else -1
-        else:
-            prev_row = self.resultsModel.get_prev_marked_row(current_row)
-
-        if prev_row >= 0:
-            index = self.resultsModel.index(prev_row, 0)
-            self.tblResults.setCurrentIndex(index)
-            self.tblResults.scrollTo(index, QtWidgets.QAbstractItemView.PositionAtCenter)
-            self.goto_result_from_table(index)
-        else:
-            self.status.showMessage("이전 마킹된 항목이 없습니다", 2000)
-
-    # ---------------- 즐겨찾기 파일 로드/저장 헬퍼 ----------------
+    # 즐겨찾기 파일 로드/저장 헬퍼
     def _load_favorites_from_file(self, json_path: str) -> List[dict]:
         """FavoriteDialog의 포맷과 동일한 구조로 favorites 로드"""
         if os.path.exists(json_path):
@@ -3219,7 +3009,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if json_path == "./fav/edit_query.json":
             self.refresh_favorite_combobox()
 
-    # ---------------- 즐겨찾기 관련 ----------------
+    # 즐겨찾기 관련
     def show_query_favorites(self):
         """기본 검색어 즐겨찾기"""
         base_value = self.edt_query.text()
@@ -3238,208 +3028,7 @@ class MainWindow(QtWidgets.QMainWindow):
         json_path = "./fav/edt_color_keywords.json"
         self._open_favorites_with_quick_add("Highlight Color 즐겨찾기", json_path, base_value, self.edt_color_keywords)
 
-    # ---------------- 설정 저장/불러오기 ----------------
-    def save_config(self):
-        """현재 설정 저장"""
-        dialog = ConfigSaveDialog(self)
-        if dialog.exec() != QtWidgets.QDialog.Accepted:
-            return
-
-        config_name = dialog.config_name
-
-        config = {
-            'query': self.edt_query.text(),
-            'search_mode': self.cmb_mode.currentText(),
-            'case_sensitive': self.chk_case.isChecked(),
-            'result_search': self.edt_result_search.text(),
-            'color_keywords': self.edt_color_keywords.text(),
-            'recursive_search': self.chk_recursive_search.isChecked(),
-            'marked_rows': list(self.resultsModel.marked_rows),
-        }
-
-        config_dir = "./config"
-        os.makedirs(config_dir, exist_ok=True)
-
-        existing_files = [f for f in os.listdir(config_dir) if f.endswith('.json')]
-        index = len(existing_files) + 1
-
-        now = datetime.now()
-        date_str = now.strftime("%Y%m%d_%H%M%S")
-
-        filename = f"{index:04d}_{date_str}_{config_name}.json"
-        filepath = os.path.join(config_dir, filename)
-
-        try:
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(config, f, ensure_ascii=False, indent=2)
-            self.status.showMessage(f"설정 저장 완료: {filename}", 5000)
-            QtWidgets.QMessageBox.information(self, "완료", f"설정이 저장되었습니다.\n{filename}")
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "오류", f"설정 저장 실패: {e}")
-
-    def load_config(self):
-        """설정 불러오기"""
-        config_dir = "./config"
-        dialog = ConfigLoadDialog(config_dir, self)
-        if dialog.exec() != QtWidgets.QDialog.Accepted or not dialog.selected_file:
-            return
-
-        filepath = dialog.selected_file
-
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-
-            self.edt_query.setText(config.get('query', ''))
-
-            search_mode = config.get('search_mode', '정규식')
-            index = self.cmb_mode.findText(search_mode)
-            if index >= 0:
-                self.cmb_mode.setCurrentIndex(index)
-
-            self.chk_case.setChecked(config.get('case_sensitive', False))
-            self.edt_result_search.setText(config.get('result_search', ''))
-            self.edt_color_keywords.setText(config.get('color_keywords', ''))
-            self.chk_recursive_search.setChecked(config.get('recursive_search', False))
-
-            marked_rows = config.get('marked_rows', [])
-            self.resultsModel.marked_rows = set(marked_rows)
-            if marked_rows:
-                self.resultsModel.dataChanged.emit(
-                    self.resultsModel.index(0, 0),
-                    self.resultsModel.index(self.resultsModel.rowCount() - 1,
-                                            self.resultsModel.columnCount() - 1)
-                )
-
-            self.status.showMessage(f"설정 불러오기 완료: {os.path.basename(filepath)}", 5000)
-            QtWidgets.QMessageBox.information(self, "완료", "설정을 불러왔습니다.")
-
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "오류", f"설정 불러오기 실패: {e}")
-
-    # ---------------- 최신 설정(자동 저장/로드) ----------------
-    def latest_config_file_path(self) -> str:
-        return os.path.join(".", "config", "latest_config.json")
-
-    def build_latest_config(self) -> dict:
-        """파일 관련 정보는 저장하지 않고, UI 설정값 + 윈도우 상태 저장"""
-        cfg = {
-            'query': self.edt_query.text(),
-            'search_mode': self.cmb_mode.currentText(),
-            'case_sensitive': self.chk_case.isChecked(),
-            'result_search': self.edt_result_search.text(),
-            'color_keywords': self.edt_color_keywords.text(),
-            'recursive_search': self.chk_recursive_search.isChecked(),
-            'prev_lines': self.edt_prev_lines.text(),
-            'next_lines': self.edt_next_lines.text(),
-            'lineView_font_pt': self.lineView.font().pointSize(),
-            'tblResults_font_pt': self.tblResults.font().pointSize(),
-            'always_on_top': self.always_on_top_action.isChecked(),
-            # 윈도우 상태 추가
-            'window_geometry': {
-                'x': self.geometry().x(),
-                'y': self.geometry().y(),
-                'width': self.geometry().width(),
-                'height': self.geometry().height()
-            },
-            'window_state': 'maximized' if self.isMaximized() else 'normal'
-        }
-        return cfg
-
-    def apply_latest_config(self, cfg: dict):
-        """저장된 설정 적용 + 윈도우 상태 복원"""
-        try:
-            # 검색 모드
-            search_mode = cfg.get('search_mode')
-            if search_mode:
-                idx = self.cmb_mode.findText(search_mode)
-                if idx >= 0:
-                    self.cmb_mode.setCurrentIndex(idx)
-
-            # 대소문자
-            if 'case_sensitive' in cfg:
-                self.chk_case.setChecked(bool(cfg.get('case_sensitive', False)))
-
-            # 쿼리/검색결과 검색
-            self.edt_query.setText(cfg.get('query', ''))
-            self.edt_result_search.setText(cfg.get('result_search', ''))
-
-            # 되돌이 검색
-            self.chk_recursive_search.setChecked(bool(cfg.get('recursive_search', False)))
-
-            # 컨텍스트 라인 수
-            if 'prev_lines' in cfg:
-                self.edt_prev_lines.setText(str(cfg.get('prev_lines')))
-            if 'next_lines' in cfg:
-                self.edt_next_lines.setText(str(cfg.get('next_lines')))
-
-            # 폰트 사이즈
-            lv_pt = cfg.get('lineView_font_pt')
-            if isinstance(lv_pt, int) and lv_pt > 0:
-                f = QtGui.QFont(g_font_face, lv_pt)
-                self.lineView.setFont(f)
-                self.lineView_clone.setFont(f)
-                self.update_lineview_font_label(lv_pt)
-
-            tbl_pt = cfg.get('tblResults_font_pt')
-            if isinstance(tbl_pt, int) and tbl_pt > 0:
-                f2 = QtGui.QFont(g_font_face, tbl_pt)
-                self.tblResults.setFont(f2)
-                self.update_tbl_font_label(tbl_pt)
-
-            # 항상 위
-            if 'always_on_top' in cfg:
-                self.always_on_top_action.setChecked(bool(cfg.get('always_on_top', False)))
-
-            # Color 키워드
-            color_text = cfg.get('color_keywords', '')
-            self.edt_color_keywords.setText(color_text)
-            if color_text:
-                self.on_color_settings_clicked()
-
-            # 윈도우 상태 복원
-            geom = cfg.get('window_geometry')
-            if geom and isinstance(geom, dict):
-                x = geom.get('x', 100)
-                y = geom.get('y', 100)
-                width = geom.get('width', g_win_size_w)
-                height = geom.get('height', g_win_size_h)
-                self.setGeometry(x, y, width, height)
-
-            window_state = cfg.get('window_state', 'normal')
-            if window_state == 'maximized':
-                self.showMaximized()
-            else:
-                self.showNormal()
-
-        except Exception as e:
-            QtWidgets.QMessageBox.warning(self, "경고", f"최신 설정 적용 중 일부 오류가 발생했습니다: {e}")
-
-    def save_latest_config(self):
-        """앱 종료 시 최신 설정 저장"""
-        try:
-            cfg = self.build_latest_config()
-            path = self.latest_config_file_path()
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, 'w', encoding='utf-8') as f:
-                json.dump(cfg, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            print(f"latest_config 저장 실패: {e}")
-
-    def load_latest_config(self):
-        """앱 시작 시 최신 설정 자동 로드"""
-        path = self.latest_config_file_path()
-        if not os.path.exists(path):
-            return
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                cfg = json.load(f)
-            self.apply_latest_config(cfg)
-            self.status.showMessage("최신 설정을 불러왔습니다.", 3000)
-        except Exception as e:
-            QtWidgets.QMessageBox.warning(self, "경고", f"최신 설정 불러오기 실패: {e}")
-
-    # ---------------- 기존 기능들 ----------------
+    # 기존 기능들
     def on_mode_changed(self, index):
         mode = self.cmb_mode.currentText()
         if mode == "일반":
@@ -3449,9 +3038,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def on_text_changed(self):
         self.is_modified = True
-        title = self.windowTitle()
-        if not title.endswith('*'):
-            self.setWindowTitle(title + '*')
+        # 탭 제목에 * 표시 (MainWindow에서 처리)
+        main_window = self.window()
+        if isinstance(main_window, MainWindow):
+            main_window.mark_tab_modified(self)
 
     def load_dropped_file(self, file_path):
         if os.path.isfile(file_path):
@@ -3469,7 +3059,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.lbl_file.setText("로딩 중: " + path)
         self.prog.setValue(0)
         self.lineView.setEnabled(False)
-        self.lineView_clone.setEnabled(False)  # clone도 비활성화
+        self.lineView_clone.setEnabled(False)
 
         self.file_thread = QtCore.QThread(self)
         self.file_loader = FileLoader(path)
@@ -3497,11 +3087,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 f.write(content)
 
             self.is_modified = False
-            title = self.windowTitle()
-            if title.endswith('*'):
-                self.setWindowTitle(title[:-1])
+            # 탭 제목에서 * 제거 (MainWindow에서 처리)
+            main_window = self.window()
+            if isinstance(main_window, MainWindow):
+                main_window.unmark_tab_modified(self)
 
-            self.status.showMessage("파일 저장 완료: " + self.current_file_path, 3000)
+            self.show_status_message("파일 저장 완료: " + self.current_file_path, 3000)
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "저장 실패", f"파일 저장 중 오류가 발생했습니다: {str(e)}")
 
@@ -3538,11 +3129,13 @@ class MainWindow(QtWidgets.QMainWindow):
         debug_measuretime_snapshot = time.time()
         print(f"debug_measuretime_duration(lineView.setPlainText) : {debug_measuretime_snapshot - debug_measuretime_start:.4f} sec")
 
-        self.lbl_file.setText(f"파일: {len(content)} chars, 인코딩: {encoding}, 라인: {len(content.split(chr(10)))}")
+        # 변경: lbl_file에 파일명 표시
+        file_name = os.path.basename(self.current_file_path) if self.current_file_path else "Unknown"
+        self.lbl_file.setText(f"파일명: {file_name} | {len(content)} chars, 인코딩: {encoding}, 라인: {len(content.split(chr(10)))}")
 
         # lbl_status에 로딩 시간 표시
         self.lbl_status.setText(f"Loading duration : {duration:.2f} sec(s)")
-        self.status.showMessage("파일 로딩 완료", 3000)
+        self.show_status_message("파일 로딩 완료", 3000)
 
         self.resultsModel.set_results([])
         self.current_results = []
@@ -3555,7 +3148,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.lbl_result_search_status.setText("")
 
         self.is_modified = False
-        self.setWindowTitle(f"Andy Finder - {os.path.basename(self.current_file_path)} - {gCurVerInfo}")
+
+        # MainWindow에서 탭 제목 업데이트
+        main_window = self.window()
+        if isinstance(main_window, MainWindow):
+            main_window.update_tab_title(self)
 
         if self.color_keywords:
             self.apply_color_highlights()
@@ -3566,16 +3163,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.current_result_index = -1
         self.content = ""
         self.lineView.clear()
-        self.lineView_clone.clear()  # clone도 clear
+        self.lineView_clone.clear()
         self.lineView.bookmarks.clear()
-        self.lineView_clone.bookmarks.clear()  # clone 북마크도 clear
+        self.lineView_clone.bookmarks.clear()
         self.current_file_path = ""
         self.is_modified = False
         self.result_search_query = ""
         self.result_search_index = -1
         self.result_search_matches = []
         self.lbl_result_search_status.setText("")
-        self.setWindowTitle(f"Andy Finder - {gCurVerInfo}")
 
     def get_context_counts(self) -> Tuple[int, int]:
         def to_int(s: str) -> int:
@@ -3646,7 +3242,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_stop.setEnabled(True)
         self.btn_search.setEnabled(False)
         self.prog.setValue(0)
-        self.status.showMessage("검색 중...")
+        self.show_status_message("검색 중...")
         self.search_thread.start()
 
     def stop_search(self):
@@ -3661,7 +3257,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def on_search_failed(self, msg: str):
         self.stop_search()
         QtWidgets.QMessageBox.critical(self, "검색 실패", msg)
-        self.status.showMessage("검색 실패: " + msg, 5000)
+        self.show_status_message("검색 실패: " + msg, 5000)
 
     def on_search_finished(self, results: List[SearchResult], duration: float):
         """검색 완료"""
@@ -3690,10 +3286,10 @@ class MainWindow(QtWidgets.QMainWindow):
         if results:
             self.current_result_index = 0
             self.goto_result(results[0])
-            self.status.showMessage(f"검색 완료: {len(results)}건", 8000)
+            self.show_status_message(f"검색 완료: {len(results)}건", 8000)
         else:
             self.current_result_index = -1
-            self.status.showMessage("검색 결과 없음", 5000)
+            self.show_status_message("검색 결과 없음", 5000)
 
     def goto_result_from_table(self, index: QModelIndex):
         r = self.resultsModel.get(index.row())
@@ -3750,13 +3346,13 @@ class MainWindow(QtWidgets.QMainWindow):
             self.color_keywords.append((keyword, color))
 
         self.apply_color_highlights()
-        self.status.showMessage(f"Color 설정 적용: {len(keywords)}개 키워드", 3000)
+        self.show_status_message(f"Color 설정 적용: {len(keywords)}개 키워드", 3000)
 
     def on_color_clear_clicked(self):
         self.color_keywords = []
         self.edt_color_keywords.clear()
         self.lineView.color_highlight_selections = []
-        self.lineView_clone.color_highlight_selections = []  # clone도 clear
+        self.lineView_clone.color_highlight_selections = []
 
         if self.current_result_index >= 0 and self.current_result_index < len(self.current_results):
             result = self.current_results[self.current_result_index]
@@ -3764,7 +3360,7 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.lineView.highlightCurrentLine()
 
-        self.status.showMessage("Color 설정 초기화", 3000)
+        self.show_status_message("Color 설정 초기화", 3000)
 
     def apply_color_highlights(self):
         """lineView와 lineView_clone 모두에 color highlight 적용"""
@@ -3941,42 +3537,569 @@ class MainWindow(QtWidgets.QMainWindow):
             f"{match_position} / {len(self.result_search_matches)}"
         )
 
+    # 설정 저장/불러오기를 위한 메서드
+    def get_config(self) -> dict:
+        """현재 탭의 설정을 딕셔너리로 반환"""
+        return {
+            'query': self.edt_query.text(),
+            'search_mode': self.cmb_mode.currentText(),
+            'case_sensitive': self.chk_case.isChecked(),
+            'result_search': self.edt_result_search.text(),
+            'color_keywords': self.edt_color_keywords.text(),
+            'recursive_search': self.chk_recursive_search.isChecked(),
+            'prev_lines': self.edt_prev_lines.text(),
+            'next_lines': self.edt_next_lines.text(),
+            'lineView_font_pt': self.lineView.font().pointSize(),
+            'tblResults_font_pt': self.tblResults.font().pointSize(),
+            'marked_rows': list(self.resultsModel.marked_rows),
+        }
+
+    def apply_config(self, config: dict):
+        """설정을 탭에 적용"""
+        try:
+            # 검색 모드
+            search_mode = config.get('search_mode')
+            if search_mode:
+                idx = self.cmb_mode.findText(search_mode)
+                if idx >= 0:
+                    self.cmb_mode.setCurrentIndex(idx)
+
+            # 대소문자
+            if 'case_sensitive' in config:
+                self.chk_case.setChecked(bool(config.get('case_sensitive', False)))
+
+            # 쿼리/검색결과 검색
+            self.edt_query.setText(config.get('query', ''))
+            self.edt_result_search.setText(config.get('result_search', ''))
+
+            # 되돌이 검색
+            self.chk_recursive_search.setChecked(bool(config.get('recursive_search', False)))
+
+            # 컨텍스트 라인 수
+            if 'prev_lines' in config:
+                self.edt_prev_lines.setText(str(config.get('prev_lines')))
+            if 'next_lines' in config:
+                self.edt_next_lines.setText(str(config.get('next_lines')))
+
+            # 폰트 사이즈
+            lv_pt = config.get('lineView_font_pt')
+            if isinstance(lv_pt, int) and lv_pt > 0:
+                f = QtGui.QFont(g_font_face, lv_pt)
+                self.lineView.setFont(f)
+                self.lineView_clone.setFont(f)
+                self.update_lineview_font_label(lv_pt)
+
+            tbl_pt = config.get('tblResults_font_pt')
+            if isinstance(tbl_pt, int) and tbl_pt > 0:
+                f2 = QtGui.QFont(g_font_face, tbl_pt)
+                self.tblResults.setFont(f2)
+                self.update_tbl_font_label(tbl_pt)
+
+            # Color 키워드
+            color_text = config.get('color_keywords', '')
+            self.edt_color_keywords.setText(color_text)
+            if color_text:
+                self.on_color_settings_clicked()
+
+            # 마킹된 행
+            marked_rows = config.get('marked_rows', [])
+            self.resultsModel.marked_rows = set(marked_rows)
+            if marked_rows:
+                self.resultsModel.dataChanged.emit(
+                    self.resultsModel.index(0, 0),
+                    self.resultsModel.index(self.resultsModel.rowCount() - 1,
+                                            self.resultsModel.columnCount() - 1)
+                )
+
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self, "경고", f"설정 적용 중 일부 오류가 발생했습니다: {e}")
+
+
+# ------------------------------ Custom QTabBar (탭별 색상 지원) ------------------------------
+
+class CustomTabBar(QtWidgets.QTabBar):
+    """탭별 색상을 지원하는 커스텀 TabBar"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # 탭별 색상 정의 (focus 없을 때 / focus 있을 때)
+        self.tab_colors = [
+            (QtGui.QColor("#FDD7E4"), QtGui.QColor("#C11B17")),         # Tab#1: 연한 빨강 / 진한 빨강
+            (QtGui.QColor("#FFFFE0"), QtGui.QColor("#FFA500")),         # Tab#2: 연한 노랑 / 진한 노랑
+            (QtGui.QColor("#7FFFD4"), QtGui.QColor("#008000")),         # Tab#3: 연한 녹색 / 진한 녹색
+        ]
+
+    def tabSizeHint(self, index):
+        """각 탭의 크기 힌트 - active tab은 200px, inactive tab은 70px"""
+        size = super().tabSizeHint(index)
+
+        # 현재 active tab인지 확인
+        if index == self.currentIndex():
+            # active tab (focus): 200px
+            size.setWidth(200)
+        else:
+            # inactive tab (no focus): 70px
+            size.setWidth(70)
+
+        return size
+
+    def paintEvent(self, event):
+        """탭 그리기"""
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        option = QtWidgets.QStyleOptionTab()
+
+        for i in range(self.count()):
+            self.initStyleOption(option, i)
+
+            # 탭 번호에 따른 색상 선택
+            if i < len(self.tab_colors):
+                bg_color, active_color = self.tab_colors[i]
+            else:
+                bg_color = QtGui.QColor(220, 220, 220)
+                active_color = QtGui.QColor(100, 100, 100)
+
+            # 현재 탭(focus)인지 확인
+            is_current = (i == self.currentIndex())
+
+            tab_rect = self.tabRect(i)
+
+            # 배경 그리기
+            if is_current:
+                painter.fillRect(tab_rect, active_color)
+            else:
+                painter.fillRect(tab_rect, bg_color)
+
+            # 외곽선 그리기
+            painter.setBrush(Qt.NoBrush)
+            if is_current:
+                # active tab: 2px solid black
+                pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 2, Qt.SolidLine)
+                painter.setPen(pen)
+                # 외곽선이 잘리지 않도록 약간 안쪽으로 조정
+                painter.drawRect(tab_rect.adjusted(1, 1, -2, -2))
+            else:
+                # inactive tab: 얇은 회색 외곽선 (탭 구분을 명확하게)
+                pen = QtGui.QPen(QtGui.QColor(128, 128, 128), 1, Qt.SolidLine)
+                painter.setPen(pen)
+                painter.drawRect(tab_rect.adjusted(0, 0, -1, -1))
+
+            # 텍스트 그리기
+            font = painter.font()
+            if is_current:
+                font.setBold(True)
+                text_color = QtGui.QColor(255, 255, 255)
+            else:
+                font.setBold(False)
+                text_color = QtGui.QColor(0, 0, 0)
+
+            painter.setFont(font)
+            painter.setPen(text_color)
+            painter.drawText(tab_rect, Qt.AlignCenter, self.tabText(i))
+
+
+# ------------------------------ 메인 윈도우 (Tab 관리) ------------------------------
+
+class MainWindow(QtWidgets.QMainWindow):
+    def resource_path(self, relpath):
+        try:
+            abspath = sys._MEIPASS
+        except Exception:
+            abspath = os.path.abspath(".")
+        return os.path.join(abspath, relpath)
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle(f"{g_pgm_name} - {gCurVerInfo}")
+        self.resize(g_win_size_w, g_win_size_h)
+
+        icon_path = self.resource_path(g_icon_name)
+        if os.path.isfile(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+
+        # F11 전체화면 토글용 상태 저장
+        self._previous_window_state = Qt.WindowNoState
+        self._previous_geometry = None
+
+        self._create_menus()
+        self._build_main_ui()
+
+        # 시작 시 최신 설정 로드
+        try:
+            self.load_latest_config()
+        except Exception:
+            pass
+
+    def _create_menus(self):
+        menubar = self.menuBar()
+
+        # 파일 메뉴
+        file_menu = menubar.addMenu('파일(&F)')
+
+        open_action = QtGui.QAction('열기(&O)', self)
+        open_action.setShortcut('Ctrl+O')
+        open_action.triggered.connect(self.open_file)
+        file_menu.addAction(open_action)
+
+        save_action = QtGui.QAction('저장(&S)', self)
+        save_action.setShortcut('Ctrl+S')
+        save_action.triggered.connect(self.save_file)
+        file_menu.addAction(save_action)
+
+        file_menu.addSeparator()
+
+        # 설정 저장/불러오기
+        save_config_action = QtGui.QAction('설정 저장(&C)', self)
+        save_config_action.setShortcut('Ctrl+Shift+S')
+        save_config_action.triggered.connect(self.save_config)
+        file_menu.addAction(save_config_action)
+
+        load_config_action = QtGui.QAction('설정 불러오기(&L)', self)
+        load_config_action.setShortcut('Ctrl+Shift+O')
+        load_config_action.triggered.connect(self.load_config)
+        file_menu.addAction(load_config_action)
+
+        file_menu.addSeparator()
+
+        # All data clear 추가
+        all_clear_action = QtGui.QAction('All data clear', self)
+        all_clear_action.setStatusTip('로드된 파일 및 관련 표시들을 초기화합니다')
+        all_clear_action.triggered.connect(self.all_data_clear)
+        file_menu.addAction(all_clear_action)
+
+        file_menu.addSeparator()
+
+        exit_action = QtGui.QAction('종료(&X)', self)
+        exit_action.setShortcut('Ctrl+Q')
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+
+        # 보기 메뉴
+        view_menu = menubar.addMenu('보기(&V)')
+
+        self.always_on_top_action = QtGui.QAction('항상위(&A)', self)
+        self.always_on_top_action.setCheckable(True)
+        self.always_on_top_action.toggled.connect(self.toggle_always_on_top)
+        view_menu.addAction(self.always_on_top_action)
+
+        # Tools 메뉴
+        tools_menu = menubar.addMenu('Tools(&T)')
+
+        open_folder_action = QtGui.QAction('Loaded 파일위치 열기(&O)', self)
+        open_folder_action.triggered.connect(self.open_loaded_file_folder)
+        tools_menu.addAction(open_folder_action)
+
+        # 도움말 메뉴
+        help_menu = menubar.addMenu('도움말(&H)')
+
+        about_action = QtGui.QAction('정보(&A)', self)
+        about_action.triggered.connect(self.show_about)
+        help_menu.addAction(about_action)
+
+    def toggle_always_on_top(self, checked: bool):
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, checked)
+        self.show()
+
+    def open_loaded_file_folder(self):
+        """로드된 파일이 존재하는 폴더를 탐색기로 열기"""
+        tab = self.get_current_tab()
+        if not tab:
+            QtWidgets.QMessageBox.information(self, "안내", "활성 탭이 없습니다.")
+            return
+
+        if not tab.current_file_path:
+            QtWidgets.QMessageBox.information(self, "안내", "로드된 파일이 없습니다.")
+            return
+
+        if not os.path.exists(tab.current_file_path):
+            QtWidgets.QMessageBox.warning(self, "경고", "파일이 존재하지 않습니다.")
+            return
+
+        folder_path = os.path.dirname(os.path.abspath(tab.current_file_path))
+
+        try:
+            if sys.platform == 'win32':
+                os.startfile(folder_path)
+            elif sys.platform == 'darwin':
+                subprocess.Popen(['open', folder_path])
+            else:  # linux
+                subprocess.Popen(['xdg-open', folder_path])
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "오류", f"폴더 열기 실패: {e}")
+
+    def show_about(self):
+        QtWidgets.QMessageBox.about(
+            self,
+            "♣ Andy Finder Program ♣",
+            f"Andy Finder : {gCurVerInfo}\n\n"
+            "(dumpstate) This tool can find and analyse a (dumpstate)file."
+        )
+
+    def _build_main_ui(self):
+        """UI 구성"""
+        # QTabWidget 생성
+        self.tab_widget = QtWidgets.QTabWidget()
+        self.tab_widget.setTabBar(CustomTabBar(self.tab_widget))
+        self.tab_widget.setTabsClosable(False)  # 탭 닫기 버튼 비활성화 (최대 3개 고정)
+        self.tab_widget.setMovable(False)  # 탭 이동 비활성화
+
+        # 초기 탭 생성 (3개)
+        for i in range(3):
+            tab_content = TabContent(i + 1, self)
+            self.tab_widget.addTab(tab_content, f"Tab#{i + 1}")
+
+        self.setCentralWidget(self.tab_widget)
+
+    def get_current_tab(self) -> Optional[TabContent]:
+        """현재 활성 탭 반환"""
+        current = self.tab_widget.currentWidget()
+        if isinstance(current, TabContent):
+            return current
+        return None
+
+    def mark_tab_modified(self, tab: TabContent):
+        """탭 제목에 * 표시"""
+        index = self.tab_widget.indexOf(tab)
+        if index >= 0:
+            text = self.tab_widget.tabText(index)
+            if not text.endswith('*'):
+                self.tab_widget.setTabText(index, text + '*')
+
+    def unmark_tab_modified(self, tab: TabContent):
+        """탭 제목에서 * 제거"""
+        index = self.tab_widget.indexOf(tab)
+        if index >= 0:
+            text = self.tab_widget.tabText(index)
+            if text.endswith('*'):
+                self.tab_widget.setTabText(index, text[:-1])
+
+    def update_tab_title(self, tab: TabContent):
+        """탭 제목 업데이트"""
+        index = self.tab_widget.indexOf(tab)
+        if index >= 0:
+            base_title = f"Tab#{tab.tab_number}"
+            if tab.is_modified:
+                base_title += "*"
+            self.tab_widget.setTabText(index, base_title)
+
+    # 메뉴 액션들은 active tab에 위임
+    def open_file(self):
+        tab = self.get_current_tab()
+        if tab:
+            tab.open_file()
+
+    def save_file(self):
+        tab = self.get_current_tab()
+        if tab:
+            tab.save_file()
+
+    def save_config(self):
+        """현재 활성 탭의 설정 저장"""
+        tab = self.get_current_tab()
+        if not tab:
+            QtWidgets.QMessageBox.information(self, "안내", "활성 탭이 없습니다.")
+            return
+
+        dialog = ConfigSaveDialog(self)
+        if dialog.exec() != QtWidgets.QDialog.Accepted:
+            return
+
+        config_name = dialog.config_name
+        config = tab.get_config()
+
+        config_dir = "./config"
+        os.makedirs(config_dir, exist_ok=True)
+
+        existing_files = [f for f in os.listdir(config_dir) if f.endswith('.json')]
+        index = len(existing_files) + 1
+
+        now = datetime.now()
+        date_str = now.strftime("%Y%m%d_%H%M%S")
+
+        filename = f"{index:04d}_{date_str}_{config_name}.json"
+        filepath = os.path.join(config_dir, filename)
+
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+            self.statusBar().showMessage(f"설정 저장 완료: {filename}", 5000)
+            QtWidgets.QMessageBox.information(self, "완료", f"설정이 저장되었습니다.\n{filename}")
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "오류", f"설정 저장 실패: {e}")
+
+    def load_config(self):
+        """설정을 현재 활성 탭에 불러오기"""
+        tab = self.get_current_tab()
+        if not tab:
+            QtWidgets.QMessageBox.information(self, "안내", "활성 탭이 없습니다.")
+            return
+
+        config_dir = "./config"
+        dialog = ConfigLoadDialog(config_dir, self)
+        if dialog.exec() != QtWidgets.QDialog.Accepted or not dialog.selected_file:
+            return
+
+        filepath = dialog.selected_file
+
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+
+            tab.apply_config(config)
+
+            self.statusBar().showMessage(f"설정 불러오기 완료: {os.path.basename(filepath)}", 5000)
+            QtWidgets.QMessageBox.information(self, "완료", "설정을 불러왔습니다.")
+
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "오류", f"설정 불러오기 실패: {e}")
+
+    def all_data_clear(self):
+        """현재 활성 탭의 데이터 초기화"""
+        tab = self.get_current_tab()
+        if not tab:
+            QtWidgets.QMessageBox.information(self, "안내", "활성 탭이 없습니다.")
+            return
+
+        try:
+            # 검색 중이면 중지
+            tab.stop_search()
+            # 현재 파일/결과/상태 초기화
+            tab.close_current_file()
+            # 파일 라벨/상태/프로그레스/테이블 선택 초기화
+            tab.lbl_file.setText("파일 없음")
+            tab.lbl_status.setText("")
+            tab.prog.setValue(0)
+            tab.tblResults.clearSelection()
+
+            # 헤더 width 초기화
+            header = tab.tblResults.horizontalHeader()
+            header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(1, QtWidgets.QHeaderView.Interactive)
+            tab.tblResults.setColumnWidth(1, 1300)
+
+            self.statusBar().showMessage("All data cleared", 3000)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "오류", f"초기화 중 오류: {e}")
+
+    # 최신 설정 (모든 탭의 설정 저장)
+    def latest_config_file_path(self) -> str:
+        return os.path.join(".", "config", "latest_config.json")
+
+    def build_latest_config(self) -> dict:
+        """모든 탭의 설정 + 윈도우 상태 저장"""
+        tabs_config = []
+        for i in range(self.tab_widget.count()):
+            tab = self.tab_widget.widget(i)
+            if isinstance(tab, TabContent):
+                tabs_config.append(tab.get_config())
+
+        cfg = {
+            'tabs': tabs_config,
+            'current_tab': self.tab_widget.currentIndex(),
+            'always_on_top': self.always_on_top_action.isChecked(),
+            'window_geometry': {
+                'x': self.geometry().x(),
+                'y': self.geometry().y(),
+                'width': self.geometry().width(),
+                'height': self.geometry().height()
+            },
+            'window_state': 'maximized' if self.isMaximized() else 'normal'
+        }
+        return cfg
+
+    def apply_latest_config(self, cfg: dict):
+        """저장된 설정 적용 (모든 탭 + 윈도우 상태)"""
+        try:
+            # 탭별 설정 적용
+            tabs_config = cfg.get('tabs', [])
+            for i, tab_cfg in enumerate(tabs_config):
+                if i < self.tab_widget.count():
+                    tab = self.tab_widget.widget(i)
+                    if isinstance(tab, TabContent):
+                        tab.apply_config(tab_cfg)
+
+            # 현재 탭 설정
+            current_tab = cfg.get('current_tab', 0)
+            if 0 <= current_tab < self.tab_widget.count():
+                self.tab_widget.setCurrentIndex(current_tab)
+
+            # 항상 위
+            if 'always_on_top' in cfg:
+                self.always_on_top_action.setChecked(bool(cfg.get('always_on_top', False)))
+
+            # 윈도우 상태 복원
+            geom = cfg.get('window_geometry')
+            if geom and isinstance(geom, dict):
+                x = geom.get('x', 100)
+                y = geom.get('y', 100)
+                width = geom.get('width', g_win_size_w)
+                height = geom.get('height', g_win_size_h)
+                self.setGeometry(x, y, width, height)
+
+            window_state = cfg.get('window_state', 'normal')
+            if window_state == 'maximized':
+                self.showMaximized()
+            else:
+                self.showNormal()
+
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self, "경고", f"최신 설정 적용 중 일부 오류가 발생했습니다: {e}")
+
+    def save_latest_config(self):
+        """앱 종료 시 최신 설정 저장"""
+        try:
+            cfg = self.build_latest_config()
+            path = self.latest_config_file_path()
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(cfg, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"latest_config 저장 실패: {e}")
+
+    def load_latest_config(self):
+        """앱 시작 시 최신 설정 자동 로드"""
+        path = self.latest_config_file_path()
+        if not os.path.exists(path):
+            return
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+            self.apply_latest_config(cfg)
+            self.statusBar().showMessage("최신 설정을 불러왔습니다.", 3000)
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self, "경고", f"최신 설정 불러오기 실패: {e}")
+
     def keyPressEvent(self, event):
         # F11: 전체화면 토글
         if event.key() == Qt.Key_F11:
             self.toggle_fullscreen()
             event.accept()
             return
-
-        # lineView나 lineView_clone에 포커스가 있고 search_dialog가 열려있으면 해당 editor의 검색이 처리
-        if (self.lineView.hasFocus() and self.lineView.search_dialog and self.lineView.search_dialog.isVisible()) or \
-                (self.lineView_clone.hasFocus() and self.lineView_clone.search_dialog and self.lineView_clone.search_dialog.isVisible()):
-            return
-
-        # edt_result_search나 tblResults에 포커스가 있을 때만 F3/F4 처리
-        if self.edt_result_search.hasFocus() or self.tblResults.hasFocus():
-            if event.key() == Qt.Key_F3:
-                self.search_in_results_prev()
-                event.accept()
-                return
-            elif event.key() == Qt.Key_F4:
-                self.search_in_results_next()
-                event.accept()
-                return
-
         super().keyPressEvent(event)
 
     def closeEvent(self, event):
-        if self.is_modified:
+        # 모든 탭의 수정 여부 확인
+        modified_tabs = []
+        for i in range(self.tab_widget.count()):
+            tab = self.tab_widget.widget(i)
+            if isinstance(tab, TabContent) and tab.is_modified:
+                modified_tabs.append(i + 1)
+
+        if modified_tabs:
+            tab_names = ", ".join([f"Tab#{i}" for i in modified_tabs])
             reply = QtWidgets.QMessageBox.question(
                 self, '확인',
-                '변경사항이 있습니다. 저장하지 않고 종료하시겠습니까?',
+                f'다음 탭에 변경사항이 있습니다: {tab_names}\n저장하지 않고 종료하시겠습니까?',
                 QtWidgets.QMessageBox.Save | QtWidgets.QMessageBox.Discard | QtWidgets.QMessageBox.Cancel,
                 QtWidgets.QMessageBox.Save
             )
 
             if reply == QtWidgets.QMessageBox.Save:
-                self.save_file()
+                # 모든 수정된 탭 저장
+                for i in modified_tabs:
+                    tab = self.tab_widget.widget(i - 1)
+                    if isinstance(tab, TabContent):
+                        tab.save_file()
                 self.save_latest_config()
                 event.accept()
             elif reply == QtWidgets.QMessageBox.Discard:
@@ -3999,7 +4122,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if self._previous_window_state == Qt.WindowMaximized:
                 self.showMaximized()
 
-            self.status.showMessage("전체화면 종료", 2000)
+            self.statusBar().showMessage("전체화면 종료", 2000)
         else:
             # 현재 상태 저장
             self._previous_geometry = self.geometry()
@@ -4007,7 +4130,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             # 전체화면으로 전환
             self.showFullScreen()
-            self.status.showMessage("전체화면 모드 (F11: 종료)", 2000)
+            self.statusBar().showMessage("전체화면 모드 (F11: 종료)", 2000)
 
 
 # ------------------------------ 앱 실행 ------------------------------
