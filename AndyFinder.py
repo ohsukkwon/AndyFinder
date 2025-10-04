@@ -91,23 +91,16 @@ class MyVersionHistory:
 - go to line 기능 추가
 '''
 
-    VER_INFO__ver_1_251004_1650 = "ver_1_251004_1650"
-    VER_DESC__ver_1_251004_1650 = '''
-- lineView 우측에 lineView_clone 추가 (QSplitter로 좌우 비율 조절 가능)
-- lineView_clone은 read-only, search/selection만 가능
-- focus를 가진 widget만 동작 (모든 key/mouse 이벤트)
-- 파일 drop 시 lineView_clone에도 동일 내용 loading
-- lineView 상단에 노란색 widget, lineView_clone 상단에 파란색 widget 표시
-- lineView와 lineView_clone 초기 width 비율 95:5로 설정
-- focus 상태에 따라 테두리 색상 변경 (focus: 빨간색 2px, no focus: 검은색 2px)
-- lineView_clone에도 current active line에 light blue 배경 표시
+    VER_INFO__ver_1_251004_1800 = "ver_1_251004_1800"
+    VER_DESC__ver_1_251004_1800 = '''
+- lineView 와 lineView_clone의 current active line 의 background color 값 bug 수정
 '''
 
     def __init__(self):
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251004_1650, self.VER_DESC__ver_1_251004_1650
+        return self.VER_INFO__ver_1_251004_1800, self.VER_DESC__ver_1_251004_1800
 
 
 # ------------------------------ Global 변수 ------------------------------
@@ -1391,6 +1384,15 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
             selection.cursor = self.textCursor()
             selection.cursor.clearSelection()
             extraSelections.append(selection)
+        else:
+            selection = QtWidgets.QTextEdit.ExtraSelection()
+            # 연한 green 배경색 설정
+            lineColor = QtGui.QColor(200, 255, 200)  # 연한 green
+            selection.format.setBackground(lineColor)
+            selection.format.setProperty(QtGui.QTextFormat.FullWidthSelection, True)
+            selection.cursor = self.textCursor()
+            selection.cursor.clearSelection()
+            extraSelections.append(selection)
 
         self.setExtraSelections(extraSelections)
 
@@ -2338,6 +2340,9 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception:
             pass
 
+        # lineView_clone 초기 highlight 설정
+        self.highlight_current_line_clone()
+
     def _create_menus(self):
         menubar = self.menuBar()
 
@@ -2437,23 +2442,6 @@ class MainWindow(QtWidgets.QMainWindow):
             f"Andy Finder : {gCurVerInfo}\n\n"
             "(dumpstate) This tool can find and analyse a (dumpstate)file."
         )
-
-    def highlight_current_line(self):
-        extra_selections = []
-
-        if not self.lineView.isReadOnly():
-            selection = QtWidgets.QTextEdit.ExtraSelection()
-
-            # 노란색 배경
-            line_color = QtGui.QColor(QtCore.Qt.yellow).lighter(160)
-
-            selection.format.setBackground(line_color)
-            selection.format.setProperty(QtGui.QTextFormat.FullWidthSelection, True)
-            selection.cursor = self.lineView.textCursor()
-            selection.cursor.clearSelection()
-            extra_selections.append(selection)
-
-        self.lineView.setExtraSelections(extra_selections)
 
     def _build_ui(self):
         top_widget = QtWidgets.QWidget()
@@ -2787,8 +2775,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # 요청사항 1: 노란색 위젯 (lineView 상단)
         lineView_indicator = QtWidgets.QWidget()
-        lineView_indicator.setFixedHeight(1)
-        lineView_indicator.setStyleSheet("background-color: yellow;")
+        lineView_indicator.setFixedWidth(10)
+        lineView_indicator.setFixedHeight(10)
+        lineView_indicator.setStyleSheet("background-color: brown;")
         lineView_layout.addWidget(lineView_indicator)
 
         # lineView
@@ -2808,7 +2797,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # 요청사항 1: 파란색 위젯 (lineView_clone 상단)
         lineView_clone_indicator = QtWidgets.QWidget()
-        lineView_clone_indicator.setFixedHeight(1)
+        lineView_clone_indicator.setFixedWidth(10)
+        lineView_clone_indicator.setFixedHeight(10)
         lineView_clone_indicator.setStyleSheet("background-color: blue;")
         lineView_clone_layout.addWidget(lineView_clone_indicator)
 
@@ -2953,28 +2943,36 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             QtWidgets.QMessageBox.warning(self, "경고", "선택한 항목의 값이 없습니다.")
 
+    def highlight_current_line(self):
+        extra_selections = []
+
+        if not self.lineView.isReadOnly():
+            selection = QtWidgets.QTextEdit.ExtraSelection()
+
+            # 노란색 배경
+            line_color = QtGui.QColor(QtCore.Qt.yellow).lighter(160)
+
+            selection.format.setBackground(line_color)
+            selection.format.setProperty(QtGui.QTextFormat.FullWidthSelection, True)
+            selection.cursor = self.lineView.textCursor()
+            selection.cursor.clearSelection()
+            extra_selections.append(selection)
+
+        self.lineView.setExtraSelections(extra_selections)
+
     def highlight_current_line_clone(self):
         """lineView_clone의 current line을 연한 green으로 하이라이트"""
         extraSelections = []
         extraSelections.extend(self.lineView_clone.color_highlight_selections)
 
-        if not self.lineView_clone.isReadOnly():
-            selection = QtWidgets.QTextEdit.ExtraSelection()
-            lineColor = QtGui.QColor(200, 255, 200)  # 연한 green
-            selection.format.setBackground(lineColor)
-            selection.format.setProperty(QtGui.QTextFormat.FullWidthSelection, True)
-            selection.cursor = self.lineView_clone.textCursor()
-            selection.cursor.clearSelection()
-            extraSelections.append(selection)
-        else:
-            # read-only 상태에서도 현재 줄 강조 표시
-            selection = QtWidgets.QTextEdit.ExtraSelection()
-            lineColor = QtGui.QColor(200, 255, 200)  # 연한 green
-            selection.format.setBackground(lineColor)
-            selection.format.setProperty(QtGui.QTextFormat.FullWidthSelection, True)
-            selection.cursor = self.lineView_clone.textCursor()
-            selection.cursor.clearSelection()
-            extraSelections.append(selection)
+        # lineView_clone은 read-only이므로 항상 연한 green 배경 표시
+        selection = QtWidgets.QTextEdit.ExtraSelection()
+        lineColor = QtGui.QColor(200, 255, 200)  # 연한 green
+        selection.format.setBackground(lineColor)
+        selection.format.setProperty(QtGui.QTextFormat.FullWidthSelection, True)
+        selection.cursor = self.lineView_clone.textCursor()
+        selection.cursor.clearSelection()
+        extraSelections.append(selection)
 
         self.lineView_clone.setExtraSelections(extraSelections)
 
