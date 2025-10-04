@@ -91,8 +91,8 @@ class MyVersionHistory:
 - go to line 기능 추가
 '''
 
-    VER_INFO__ver_1_251004_1640 = "ver_1_251004_1640"
-    VER_DESC__ver_1_251004_1640 = '''
+    VER_INFO__ver_1_251004_1650 = "ver_1_251004_1650"
+    VER_DESC__ver_1_251004_1650 = '''
 - lineView 우측에 lineView_clone 추가 (QSplitter로 좌우 비율 조절 가능)
 - lineView_clone은 read-only, search/selection만 가능
 - focus를 가진 widget만 동작 (모든 key/mouse 이벤트)
@@ -107,7 +107,7 @@ class MyVersionHistory:
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251004_1640, self.VER_DESC__ver_1_251004_1640
+        return self.VER_INFO__ver_1_251004_1650, self.VER_DESC__ver_1_251004_1650
 
 
 # ------------------------------ Global 변수 ------------------------------
@@ -2842,15 +2842,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tblResults.setItemDelegateForColumn(1, NoWrapDelegate(self.tblResults))
         self.tblResults.setShowGrid(False)
 
+        self.resultsModel = ResultsModel()
+        self.tblResults.setModel(self.resultsModel)
+        self.tblResults.doubleClicked.connect(self.on_table_double_clicked)
+
         # 초기 헤더 width 설정
         header = self.tblResults.horizontalHeader()
         header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QtWidgets.QHeaderView.Interactive)
         self.tblResults.setColumnWidth(1, 1300)
-
-        self.resultsModel = ResultsModel()
-        self.tblResults.setModel(self.resultsModel)
-        self.tblResults.doubleClicked.connect(self.on_table_double_clicked)
 
         # 세로 splitter에 추가
         splitter_vertical.addWidget(splitter_horizontal)
