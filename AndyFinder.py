@@ -2444,7 +2444,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self,
             "♣ Andy Finder Program ♣",
             f"Andy Finder : {gCurVerInfo}\n\n"
-            "(dumpstate) This tool can find and analyse a (dumpstate)file."
+            "This can find anything and analyse a dumpstate."
         )
 
     def _build_ui(self):

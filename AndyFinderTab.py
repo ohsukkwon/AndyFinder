@@ -2584,22 +2584,39 @@ class TabContent(QtWidgets.QWidget):
         top_layout.addWidget(fourth_row)
         top_layout.addWidget(fifth_row)
 
-        # 중앙: 세로 splitter
+        # ===== 변경: 세로 splitter 추가 (top_widget와 중앙 컨텐츠 사이) =====
+        main_vertical_splitter = QtWidgets.QSplitter()
+        main_vertical_splitter.setOrientation(Qt.Vertical)
+        main_vertical_splitter.setStyleSheet("""
+                QSplitter::handle {
+                    background-color: #16F529;
+                    height: 2px;
+                    margin: 0px;
+                }
+                QSplitter::handle:vertical {
+                    height: 2px;
+                }
+                QSplitter::handle:vertical:hover {
+                    background-color: blue;
+                }
+            """)
+
+        # 중앙: 세로 splitter (기존의 splitter_vertical)
         splitter_vertical = QtWidgets.QSplitter()
         splitter_vertical.setOrientation(Qt.Vertical)
         splitter_vertical.setStyleSheet("""
-            QSplitter::handle {
-                background-color: #16F529;
-                height: 2px;
-                margin: 0px;
-            }
-            QSplitter::handle:vertical {
-                height: 2px;
-            }
-            QSplitter::handle:vertical:hover {
-                background-color: blue;
-            }
-        """)
+                QSplitter::handle {
+                    background-color: #16F529;
+                    height: 2px;
+                    margin: 0px;
+                }
+                QSplitter::handle:vertical {
+                    height: 2px;
+                }
+                QSplitter::handle:vertical:hover {
+                    background-color: blue;
+                }
+            """)
 
         # lineView와 lineView_clone을 가로 splitter로 배치
         splitter_horizontal = QtWidgets.QSplitter()
@@ -2663,11 +2680,13 @@ class TabContent(QtWidgets.QWidget):
 
         lineView_clone_layout.addWidget(self.lineView_clone)
 
+        # lineView 와 lineView_clone에 CurrentLine color 설정
+        self.lineView.highlightCurrentLine()
+        self.lineView_clone.highlightCurrentLine()
+
         # 가로 splitter에 컨테이너 추가
         splitter_horizontal.addWidget(lineView_container)
         splitter_horizontal.addWidget(lineView_clone_container)
-
-        # 초기 비율 95:5 설정
         splitter_horizontal.setSizes([9990, 10])
 
         # tblResults
@@ -2724,11 +2743,17 @@ class TabContent(QtWidgets.QWidget):
         self.lineView_clone.fontSizeChanged.connect(self.update_lineview_font_label)  # clone도 연동
         self.tblResults.fontSizeChanged.connect(self.update_tbl_font_label)
 
+        # ===== 변경: main_vertical_splitter에 top_widget와 splitter_vertical 추가 =====
+        main_vertical_splitter.addWidget(top_widget)
+        main_vertical_splitter.addWidget(splitter_vertical)
+        # top_widget는 작게, splitter_vertical은 크게
+        main_vertical_splitter.setStretchFactor(0, 1)
+        main_vertical_splitter.setStretchFactor(1, 10)
+
         # 중앙 위젯 구성
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(top_widget)
-        layout.addWidget(splitter_vertical, 1)
+        layout.addWidget(main_vertical_splitter, 1)  # 변경: top_widget 대신 main_vertical_splitter 추가
         layout.addWidget(self.status_widget)
 
         # 시그널
@@ -3624,9 +3649,9 @@ class CustomTabBar(QtWidgets.QTabBar):
         super().__init__(parent)
         # 탭별 색상 정의 (focus 없을 때 / focus 있을 때)
         self.tab_colors = [
-            (QtGui.QColor("#FDD7E4"), QtGui.QColor("#C11B17")),         # Tab#1: 연한 빨강 / 진한 빨강
-            (QtGui.QColor("#FFFFE0"), QtGui.QColor("#FFA500")),         # Tab#2: 연한 노랑 / 진한 노랑
-            (QtGui.QColor("#7FFFD4"), QtGui.QColor("#008000")),         # Tab#3: 연한 녹색 / 진한 녹색
+            (QtGui.QColor("#BCC2C2"), QtGui.QColor("#C11B17")),         # Tab#1: 연한 빨강 / 진한 빨강
+            (QtGui.QColor("#BCC2C2"), QtGui.QColor("#8D4004")),         # Tab#2: 연한 노랑 / 진한 노랑
+            (QtGui.QColor("#BCC2C2"), QtGui.QColor("#32612D")),         # Tab#3: 연한 녹색 / 진한 녹색
         ]
 
     def tabSizeHint(self, index):
@@ -3837,18 +3862,32 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _build_main_ui(self):
         """UI 구성"""
+        # ===== 추가: Menu와 tab 사이에 5px 노란색 위젯 =====
+        yellow_spacer = QtWidgets.QWidget()
+        yellow_spacer.setFixedHeight(15)
+        yellow_spacer.setStyleSheet("background-color: #F0F0F0;")
+
         # QTabWidget 생성
         self.tab_widget = QtWidgets.QTabWidget()
         self.tab_widget.setTabBar(CustomTabBar(self.tab_widget))
-        self.tab_widget.setTabsClosable(False)  # 탭 닫기 버튼 비활성화 (최대 3개 고정)
-        self.tab_widget.setMovable(False)  # 탭 이동 비활성화
+        self.tab_widget.setTabsClosable(False)
+        self.tab_widget.setMovable(False)
 
         # 초기 탭 생성 (3개)
         for i in range(3):
             tab_content = TabContent(i + 1, self)
             self.tab_widget.addTab(tab_content, f"Tab#{i + 1}")
 
-        self.setCentralWidget(self.tab_widget)
+        # ===== 변경: 중앙 위젯을 컨테이너로 구성 =====
+        central_widget = QtWidgets.QWidget()
+        central_layout = QtWidgets.QVBoxLayout(central_widget)
+        central_layout.setContentsMargins(0, 0, 0, 0)
+        central_layout.setSpacing(0)
+
+        central_layout.addWidget(yellow_spacer)
+        central_layout.addWidget(self.tab_widget)
+
+        self.setCentralWidget(central_widget)
 
     def get_current_tab(self) -> Optional[TabContent]:
         """현재 활성 탭 반환"""
