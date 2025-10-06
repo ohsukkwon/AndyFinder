@@ -44,19 +44,24 @@ class MyVersionHistory:
 
     VER_INFO__ver_1_251006_1210 = "ver_1_251006_1210"
     VER_DESC__ver_1_251006_1210 = '''
-    - DragTableView에 Ctrl+Shift+C 단축키 처리 추가
+- DragTableView에 Ctrl+Shift+C 단축키 처리 추가
 '''
 
     VER_INFO__ver_1_251006_1250 = "ver_1_251006_1250"
     VER_DESC__ver_1_251006_1250 = '''
-        - DragTableView에 Ctrl+Shift+C 단축키 처리시 nul 처리 수정(nul은 제거)
-    '''
+- DragTableView에 Ctrl+Shift+C 단축키 처리시 nul 처리 수정(nul은 제거)
+'''
+
+    VER_INFO__ver_1_251007_0100 = "ver_1_251007_0100"
+    VER_DESC__ver_1_251007_0100 = '''
+- Bookmark label 추가
+'''
 
     def __init__(self):
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251006_1250, self.VER_DESC__ver_1_251006_1250
+        return self.VER_INFO__ver_1_251007_0100, self.VER_DESC__ver_1_251007_0100
 
 
 # ------------------------------ Global 변수 ------------------------------
@@ -1239,12 +1244,20 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
         self.setStyleSheet("QPlainTextEdit { border: 2px solid black; }")
 
     def toggle_bookmark(self, line_number):
-        """북마크 토글 (1-based)"""
+        """북마크 토글 (1-based) - 변경 시 부모에 알림"""
         if line_number in self.bookmarks:
             self.bookmarks.remove(line_number)
         else:
             self.bookmarks.add(line_number)
         self.lineNumberArea.update()
+
+        # 부모(TabContent)에 북마크 변경 알림
+        parent = self.parent()
+        while parent:
+            if isinstance(parent, TabContent):
+                parent.update_bookmark_labels()
+                break
+            parent = parent.parent()
 
     def goto_next_bookmark(self):
         """다음 북마크로 이동"""
@@ -1898,7 +1911,7 @@ class DragTableView(QtWidgets.QTableView):
             super().mouseDoubleClickEvent(event)
         elif event.button() == Qt.RightButton:
             # 오른쪽 더블클릭: 마킹 토글만 (lineView 이동 안함)
-            index = self.indexAt(event.pos())
+            index = self.indexAt(event.position().toPoint())
             if index.isValid():
                 tab_content = self.parent()
                 while tab_content and not isinstance(tab_content, TabContent):
@@ -1912,7 +1925,7 @@ class DragTableView(QtWidgets.QTableView):
     def mousePressEvent(self, event):
         # Shift + Right Click 으로 범위 선택 지원
         if event.button() == Qt.RightButton and (event.modifiers() & Qt.ShiftModifier):
-            idx = self.indexAt(event.pos())
+            idx = self.indexAt(event.position().toPoint())
             if idx.isValid():
                 sel_model = self.selectionModel()
                 model = self.model()
@@ -2233,7 +2246,7 @@ class ResultsModel(QtCore.QAbstractTableModel):
         self.endResetModel()
 
     def toggle_mark(self, row: int):
-        """row 마킹 토글"""
+        """row 마킹 토글 - 변경 시 부모에 알림"""
         if row < 0 or row >= len(self.rows):
             return
 
@@ -2700,18 +2713,32 @@ class TabContent(QtWidgets.QWidget):
             }
         """)
 
+        # =============================== LEFT viewer ===============================
         # lineView (왼쪽) - 컨테이너 위젯 생성
         lineView_container = QtWidgets.QWidget()
         lineView_layout = QtWidgets.QVBoxLayout(lineView_container)
         lineView_layout.setContentsMargins(0, 0, 0, 0)
         lineView_layout.setSpacing(0)
 
-        # 노란색 위젯 (lineView 상단)
+        lineView_lbl_container = QtWidgets.QWidget()
+        lineView_lbl_layout = QtWidgets.QHBoxLayout(lineView_lbl_container)
+        lineView_lbl_layout.setContentsMargins(0, 0, 0, 0)
+        lineView_lbl_layout.setSpacing(0)
+        lineView_layout.addWidget(lineView_lbl_container)
+
+        # Left 사각형 위젯 (lineView 상단)
         lineView_indicator = QtWidgets.QWidget()
         lineView_indicator.setFixedWidth(10)
         lineView_indicator.setFixedHeight(10)
         lineView_indicator.setStyleSheet("background-color: brown;")
-        lineView_layout.addWidget(lineView_indicator)
+        lineView_lbl_layout.addWidget(lineView_indicator)
+
+        # 라벨 추가 (lineView 상단) - 변경된 부분
+        self.lable_lineView = QtWidgets.QLabel()
+        self.lable_lineView.setStyleSheet("color: black; brown; padding: 2px; font-weight: bold;")
+        self.lable_lineView.setAlignment(Qt.AlignLeft)
+        self.lable_lineView.setMinimumWidth(50)
+        lineView_lbl_layout.addWidget(self.lable_lineView)
 
         # lineView
         self.lineView = DragDropCodeEditor()
@@ -2719,29 +2746,46 @@ class TabContent(QtWidgets.QWidget):
         self.lineView.textChanged.connect(self.on_text_changed)
         self.lineView.fileDropped.connect(self.load_dropped_file)
         self.lineView.cursorPositionChanged.connect(self.highlight_current_line)
+        # 북마크 변경 시그널 연결 추가
+        self.lineView.cursorPositionChanged.connect(self.update_bookmark_labels)
 
         lineView_layout.addWidget(self.lineView)
 
+        # =============================== RIGHT viewer ===============================
         # lineView_clone (오른쪽) - 컨테이너 위젯 생성
         lineView_clone_container = QtWidgets.QWidget()
         lineView_clone_layout = QtWidgets.QVBoxLayout(lineView_clone_container)
         lineView_clone_layout.setContentsMargins(0, 0, 0, 0)
         lineView_clone_layout.setSpacing(0)
 
-        # 파란색 위젯 (lineView_clone 상단)
+        lineView_lbl_clone_container = QtWidgets.QWidget()
+        lineView_lbl_clone_layout = QtWidgets.QHBoxLayout(lineView_lbl_clone_container)
+        lineView_lbl_clone_layout.setContentsMargins(0, 0, 0, 0)
+        lineView_lbl_clone_layout.setSpacing(0)
+        lineView_clone_layout.addWidget(lineView_lbl_clone_container)
+
+        # RIGHT 사각형 위젯 (lineView_clone 상단)
         lineView_clone_indicator = QtWidgets.QWidget()
         lineView_clone_indicator.setFixedWidth(10)
         lineView_clone_indicator.setFixedHeight(10)
         lineView_clone_indicator.setStyleSheet("background-color: blue;")
-        lineView_clone_layout.addWidget(lineView_clone_indicator)
+        lineView_lbl_clone_layout.addWidget(lineView_clone_indicator)
+
+        # 라벨 추가 (lineView_clone 상단) - 새로 추가된 부분
+        self.lable_lineView_clone = QtWidgets.QLabel("")
+        self.lable_lineView_clone.setStyleSheet("color: black; padding: 2px; font-weight: bold;")
+        self.lable_lineView_clone.setAlignment(Qt.AlignLeft)
+        self.lable_lineView_clone.setMinimumWidth(50)
+        lineView_lbl_clone_layout.addWidget(self.lable_lineView_clone)
 
         # lineView_clone (오른쪽) - read-only
         self.lineView_clone = DragDropCodeEditor()
         self.lineView_clone.setFont(QtGui.QFont(g_font_face, g_font_size))
         self.lineView_clone.setReadOnly(True)  # 읽기 전용
-        self.lineView_clone.fileDropped.connect(self.load_dropped_file)  # 파일 drop 허용
-        # lineView_clone의 current line 배경색을 연한 green으로 설정
+        #self.lineView_clone.fileDropped.connect(self.load_dropped_file)
         self.lineView_clone.cursorPositionChanged.connect(self.highlight_current_line_clone)
+        # 북마크 변경 시그널 연결 추가
+        self.lineView_clone.cursorPositionChanged.connect(self.update_bookmark_labels)
 
         lineView_clone_layout.addWidget(self.lineView_clone)
 
@@ -2754,6 +2798,7 @@ class TabContent(QtWidgets.QWidget):
         splitter_horizontal.addWidget(lineView_clone_container)
         splitter_horizontal.setSizes([9990, 10])
 
+        # =============================== Result Table ===============================
         # tblResults
         self.tblResults = DragTableView()
         self.tblResults.setFont(QtGui.QFont(g_font_face, g_font_size))
@@ -2792,20 +2837,18 @@ class TabContent(QtWidgets.QWidget):
         status_layout.addWidget(self.lbl_status, 1)
 
         # 우측: 폰트 사이즈 라벨
-        self.lable_lineView = QtWidgets.QLabel("")
         self.lable_tblResults = QtWidgets.QLabel("")
-        self.lable_lineView.setStyleSheet("color: #404040;")
         self.lable_tblResults.setStyleSheet("color: #404040;")
-        status_layout.addWidget(self.lable_lineView)
         status_layout.addWidget(self.lable_tblResults)
 
-        # 초기 폰트 사이즈 표시
+        # 초기 폰트 사이즈 및 북마크 표시
         self.update_lineview_font_label(self.lineView.font().pointSize())
         self.update_tbl_font_label(self.tblResults.font().pointSize())
+        self.update_bookmark_labels()  # 초기 북마크 개수 표시
 
         # 폰트 변경 시 라벨 업데이트 연결
         self.lineView.fontSizeChanged.connect(self.update_lineview_font_label)
-        self.lineView_clone.fontSizeChanged.connect(self.update_lineview_font_label)  # clone도 연동
+        self.lineView_clone.fontSizeChanged.connect(self.update_lineview_font_label)
         self.tblResults.fontSizeChanged.connect(self.update_tbl_font_label)
 
         # ===== 변경: main_vertical_splitter에 top_widget와 splitter_vertical 추가 =====
@@ -3041,6 +3084,7 @@ class TabContent(QtWidgets.QWidget):
         if row < 0 or row >= self.resultsModel.rowCount():
             return
         self.resultsModel.toggle_mark(row)
+        self.update_bookmark_labels()  # 추가
         self.show_status_message(f"Row {row + 1} marking toggled", 2000)
 
     # 즐겨찾기 파일 로드/저장 헬퍼
@@ -3782,6 +3826,29 @@ class TabContent(QtWidgets.QWidget):
             )
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, "경고", f"복사 중 오류 발생: {e}")
+
+    def update_bookmark_labels(self):
+        """lineView, lineView_clone, tblResults의 북마크 개수를 라벨에 표시"""
+        lineview_bookmarks = len(self.lineView.bookmarks)
+        lineview_clone_bookmarks = len(self.lineView_clone.bookmarks)
+        tblresults_marks = len(self.resultsModel.marked_rows)
+
+        # lable_lineView: lineView 북마크 개수 표시
+        self.lable_lineView.setText(f"Left Viewer (BM:{lineview_bookmarks}) | {self.lineView.font().pointSize()}pt")
+
+        # lable_lineView_clone: lineView_clone 북마크 개수 표시
+        self.lable_lineView_clone.setText(f"Right Viewer (BM:{lineview_clone_bookmarks}) | {self.lineView_clone.font().pointSize()}pt")
+
+        # lable_tblResults: tblResults 마킹 개수 표시
+        self.lable_tblResults.setText(f"Results (Mark:{tblresults_marks}) | {self.tblResults.font().pointSize()}pt")
+
+    def update_lineview_font_label(self, size: int):
+        """폰트 변경 시 라벨 업데이트"""
+        self.update_bookmark_labels()
+
+    def update_tbl_font_label(self, size: int):
+        """폰트 변경 시 라벨 업데이트"""
+        self.update_bookmark_labels()
 
 # ------------------------------ Custom QTabBar (탭별 색상 지원) ------------------------------
 
