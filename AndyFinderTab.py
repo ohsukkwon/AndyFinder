@@ -42,11 +42,16 @@ class MyVersionHistory:
 - Focus 상태에 따른 탭 색상 변경
 '''
 
+    VER_INFO__ver_1_251006_1210 = "ver_1_251006_1210"
+    VER_DESC__ver_1_251006_1210 = '''
+    - DragTableView에 Ctrl+Shift+C 단축키 처리 추가
+'''
+
     def __init__(self):
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251005_0000, self.VER_DESC__ver_1_251005_0000
+        return self.VER_INFO__ver_1_251006_1210, self.VER_DESC__ver_1_251006_1210
 
 
 # ------------------------------ Global 변수 ------------------------------
@@ -2044,8 +2049,63 @@ class DragTableView(QtWidgets.QTableView):
             pass
         self.viewport().update()
 
+    def copy_range_from_current_row(self):
+        """
+        현재 active row의 0번째 컬럼(LineNumber)에서 시작하여
+        다음 row의 0번째 컬럼 LineNumber 이전까지의 내용을 복사.
+        마지막 행일 경우 파일 끝까지 복사.
+        """
+        model = self.model()
+        if not model:
+            return
+
+        current_index = self.currentIndex()
+        if not current_index.isValid():
+            return
+
+        current_row = current_index.row()
+
+        # 현재 행의 LineNumber (0번째 컬럼)
+        start_line_data = model.data(model.index(current_row, 0), Qt.DisplayRole)
+
+        try:
+            start_line = int(str(start_line_data))
+        except (ValueError, TypeError):
+            return
+
+        # 마지막 행인지 확인
+        is_last_row = (current_row + 1 >= model.rowCount())
+
+        if is_last_row:
+            # 마지막 행이면 파일 끝까지 복사
+            end_line = -1  # -1은 파일 끝을 의미
+        else:
+            # 다음 행의 LineNumber (0번째 컬럼)
+            end_line_data = model.data(model.index(current_row + 1, 0), Qt.DisplayRole)
+            try:
+                end_line = int(str(end_line_data)) - 1  # 다음 행의 이전 줄까지
+            except (ValueError, TypeError):
+                return
+
+        # TabContent의 복사 메서드 호출
+        parent = self.parent()
+        while parent:
+            if isinstance(parent, TabContent):
+                if is_last_row:
+                    parent.copy_lines_to_end(start_line)
+                else:
+                    parent.copy_lines_range(start_line, end_line)
+                break
+            parent = parent.parent()
+
     # ---- Ctrl+C 복사, Ctrl+A 전체 선택 (focus가 있을 때만) ----
     def keyPressEvent(self, event: QtGui.QKeyEvent):
+        # tblResults에 focus가 있을 때 Ctrl+Shift+C로 범위 복사
+        if self.hasFocus() and event.modifiers() == (Qt.ControlModifier | Qt.ShiftModifier) and event.key() == Qt.Key_C:
+            self.copy_range_from_current_row()
+            event.accept()
+            return
+
         # tblResults에 focus가 있을 때 F2/Shift+F2로 마킹된 row 이동
         if self.hasFocus() and event.key() == Qt.Key_F2:
             if event.modifiers() == Qt.ShiftModifier:
@@ -2118,7 +2178,6 @@ class DragTableView(QtWidgets.QTableView):
             lines.append(f"{c0}\t{c1}")
 
         QtWidgets.QApplication.clipboard().setText("\n".join(lines))
-
 
 # ------------------------------ NoWrapDelegate (tblResults 1열 전용) ------------------------------
 
@@ -3639,6 +3698,70 @@ class TabContent(QtWidgets.QWidget):
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, "경고", f"설정 적용 중 일부 오류가 발생했습니다: {e}")
 
+    def copy_lines_range(self, start_line: int, end_line: int):
+        """
+        start_line부터 end_line까지의 내용을 클립보드에 복사
+        (start_line, end_line 모두 포함)
+        """
+        if start_line == end_line:
+            # 한 줄만 복사
+            content = self.lineView.toPlainText()
+            lines = content.split('\n')
+
+            if start_line < 1 or start_line > len(lines):
+                QtWidgets.QMessageBox.warning(self, "경고", "라인 번호가 범위를 벗어났습니다.")
+                return
+
+            selected_text = lines[start_line - 1]
+        else:
+            # 범위 복사
+            if start_line > end_line:
+                start_line, end_line = end_line, start_line
+
+            content = self.lineView.toPlainText()
+            lines = content.split('\n')
+
+            if start_line < 1 or end_line > len(lines):
+                QtWidgets.QMessageBox.warning(self, "경고", "라인 번호가 범위를 벗어났습니다.")
+                return
+
+            selected_lines = lines[start_line - 1:end_line]
+            selected_text = '\n'.join(selected_lines)
+
+        # 클립보드에 복사
+        clipboard = QtWidgets.QApplication.clipboard()
+        clipboard.setText(selected_text)
+
+        line_count = end_line - start_line + 1
+        self.show_status_message(
+            f"라인 {start_line}~{end_line} 복사됨 ({line_count}줄)",
+            3000
+        )
+
+    def copy_lines_to_end(self, start_line: int):
+        """
+        start_line부터 파일 끝까지의 내용을 클립보드에 복사
+        """
+        content = self.lineView.toPlainText()
+        lines = content.split('\n')
+
+        if start_line < 1 or start_line > len(lines):
+            QtWidgets.QMessageBox.warning(self, "경고", "라인 번호가 범위를 벗어났습니다.")
+            return
+
+        # start_line부터 끝까지 추출
+        selected_lines = lines[start_line - 1:]
+        selected_text = '\n'.join(selected_lines)
+
+        # 클립보드에 복사
+        clipboard = QtWidgets.QApplication.clipboard()
+        clipboard.setText(selected_text)
+
+        line_count = len(selected_lines)
+        self.show_status_message(
+            f"라인 {start_line}~끝 복사됨 ({line_count}줄)",
+            3000
+        )
 
 # ------------------------------ Custom QTabBar (탭별 색상 지원) ------------------------------
 
@@ -3862,10 +3985,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _build_main_ui(self):
         """UI 구성"""
-        # ===== 추가: Menu와 tab 사이에 5px 노란색 위젯 =====
+        # ===== 추가: Menu와 tab 사이에 1px 검은색 위젯 =====
         yellow_spacer = QtWidgets.QWidget()
-        yellow_spacer.setFixedHeight(15)
-        yellow_spacer.setStyleSheet("background-color: #F0F0F0;")
+        yellow_spacer.setFixedHeight(1)
+        yellow_spacer.setStyleSheet("background-color: #000000;")
 
         # QTabWidget 생성
         self.tab_widget = QtWidgets.QTabWidget()
