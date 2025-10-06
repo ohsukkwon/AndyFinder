@@ -47,11 +47,16 @@ class MyVersionHistory:
     - DragTableView에 Ctrl+Shift+C 단축키 처리 추가
 '''
 
+    VER_INFO__ver_1_251006_1250 = "ver_1_251006_1250"
+    VER_DESC__ver_1_251006_1250 = '''
+        - DragTableView에 Ctrl+Shift+C 단축키 처리시 nul 처리 수정(nul은 제거)
+    '''
+
     def __init__(self):
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251006_1210, self.VER_DESC__ver_1_251006_1210
+        return self.VER_INFO__ver_1_251006_1250, self.VER_DESC__ver_1_251006_1250
 
 
 # ------------------------------ Global 변수 ------------------------------
@@ -2054,6 +2059,7 @@ class DragTableView(QtWidgets.QTableView):
         현재 active row의 0번째 컬럼(LineNumber)에서 시작하여
         다음 row의 0번째 컬럼 LineNumber 이전까지의 내용을 복사.
         마지막 행일 경우 파일 끝까지 복사.
+        NUL 문자 제거 후 복사.
         """
         model = self.model()
         if not model:
@@ -2092,9 +2098,9 @@ class DragTableView(QtWidgets.QTableView):
         while parent:
             if isinstance(parent, TabContent):
                 if is_last_row:
-                    parent.copy_lines_to_end(start_line)
+                    parent.copy_lines_to_end_remove_nul(start_line)
                 else:
-                    parent.copy_lines_range(start_line, end_line)
+                    parent.copy_lines_range_remove_nul(start_line, end_line)
                 break
             parent = parent.parent()
 
@@ -3698,9 +3704,10 @@ class TabContent(QtWidgets.QWidget):
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, "경고", f"설정 적용 중 일부 오류가 발생했습니다: {e}")
 
-    def copy_lines_range(self, start_line: int, end_line: int):
+    def copy_lines_range_remove_nul(self, start_line: int, end_line: int):
         """
         start_line부터 end_line까지의 내용을 클립보드에 복사
+        NUL 문자를 제거하여 복사
         (start_line, end_line 모두 포함)
         """
         if start_line == end_line:
@@ -3728,19 +3735,26 @@ class TabContent(QtWidgets.QWidget):
             selected_lines = lines[start_line - 1:end_line]
             selected_text = '\n'.join(selected_lines)
 
-        # 클립보드에 복사
-        clipboard = QtWidgets.QApplication.clipboard()
-        clipboard.setText(selected_text)
+        # NUL 문자 제거
+        selected_text = selected_text.replace('\x00', '')
 
-        line_count = end_line - start_line + 1
-        self.show_status_message(
-            f"라인 {start_line}~{end_line} 복사됨 ({line_count}줄)",
-            3000
-        )
+        try:
+            # 클립보드에 복사
+            clipboard = QtWidgets.QApplication.clipboard()
+            clipboard.setText(selected_text)
 
-    def copy_lines_to_end(self, start_line: int):
+            line_count = end_line - start_line + 1
+            self.show_status_message(
+                f"라인 {start_line}~{end_line} 복사됨 ({line_count}줄) [NUL 문자 제거됨]",
+                3000
+            )
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self, "경고", f"복사 중 오류 발생: {e}")
+
+    def copy_lines_to_end_remove_nul(self, start_line: int):
         """
         start_line부터 파일 끝까지의 내용을 클립보드에 복사
+        NUL 문자를 제거하여 복사
         """
         content = self.lineView.toPlainText()
         lines = content.split('\n')
@@ -3753,15 +3767,21 @@ class TabContent(QtWidgets.QWidget):
         selected_lines = lines[start_line - 1:]
         selected_text = '\n'.join(selected_lines)
 
-        # 클립보드에 복사
-        clipboard = QtWidgets.QApplication.clipboard()
-        clipboard.setText(selected_text)
+        # NUL 문자 제거
+        selected_text = selected_text.replace('\x00', '')
 
-        line_count = len(selected_lines)
-        self.show_status_message(
-            f"라인 {start_line}~끝 복사됨 ({line_count}줄)",
-            3000
-        )
+        try:
+            # 클립보드에 복사
+            clipboard = QtWidgets.QApplication.clipboard()
+            clipboard.setText(selected_text)
+
+            line_count = len(selected_lines)
+            self.show_status_message(
+                f"라인 {start_line}~끝 복사됨 ({line_count}줄) [NUL 문자 제거됨]",
+                3000
+            )
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self, "경고", f"복사 중 오류 발생: {e}")
 
 # ------------------------------ Custom QTabBar (탭별 색상 지원) ------------------------------
 
