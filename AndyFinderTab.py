@@ -56,12 +56,16 @@ class MyVersionHistory:
     VER_DESC__ver_1_251007_0100 = '''
 - Bookmark label 추가
 '''
+    VER_INFO__ver_1_251008_1500 = "ver_1_251008_1500"
+    VER_DESC__ver_1_251008_1500 = '''
+    - DragTableView의 header 의 width 수정
+    '''
 
     def __init__(self):
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251007_0100, self.VER_DESC__ver_1_251007_0100
+        return self.VER_INFO__ver_1_251008_1500, self.VER_DESC__ver_1_251008_1500
 
 
 # ------------------------------ Global 변수 ------------------------------
@@ -2644,15 +2648,11 @@ class TabContent(QtWidgets.QWidget):
         self.edt_color_keywords.setPlaceholderText("예: activity|window|package (F5:Color 설정)")
         self.edt_color_keywords.setStyleSheet("QLineEdit { background-color: #C9DFEC; }")
 
-        self.btn_apply_colors = QtWidgets.QPushButton("설정")
-        self.btn_apply_colors.clicked.connect(self.on_color_settings_clicked)
-
         self.btn_clear_colors = QtWidgets.QPushButton("Clear")
         self.btn_clear_colors.clicked.connect(self.on_color_clear_clicked)
 
         fifth_layout.addWidget(self.btn_color_keywords_fav)
         fifth_layout.addWidget(self.edt_color_keywords, 1)
-        fifth_layout.addWidget(self.btn_apply_colors)
         fifth_layout.addWidget(self.btn_clear_colors)
         fifth_layout.addStretch()
 
@@ -2818,7 +2818,7 @@ class TabContent(QtWidgets.QWidget):
 
         # 초기 헤더 width 설정
         header = self.tblResults.horizontalHeader()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Interactive)
         header.setSectionResizeMode(1, QtWidgets.QHeaderView.Interactive)
         self.tblResults.setColumnWidth(1, 1300)
 
@@ -3400,12 +3400,6 @@ class TabContent(QtWidgets.QWidget):
 
         self.apply_context_snippets_to_current_results()
         self.resultsModel.set_results(results)
-
-        # 헤더 리사이즈 모드
-        header = self.tblResults.horizontalHeader()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
-        self.tblResults.setColumnWidth(1, 1500)
 
         self.tblResults.resizeRowsToContents()
 
@@ -4219,12 +4213,6 @@ class MainWindow(QtWidgets.QMainWindow):
             tab.lbl_status.setText("")
             tab.prog.setValue(0)
             tab.tblResults.clearSelection()
-
-            # 헤더 width 초기화
-            header = tab.tblResults.horizontalHeader()
-            header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
-            header.setSectionResizeMode(1, QtWidgets.QHeaderView.Interactive)
-            tab.tblResults.setColumnWidth(1, 1300)
 
             self.statusBar().showMessage("All data cleared", 3000)
         except Exception as e:
