@@ -1,0 +1,15 @@
+{
+  "favorites": [
+    {
+      "type": "folder",
+      "name": "kernel",
+      "children": [
+        {
+          "type": "item",
+          "name": "kernel_panic",
+          "value": "dump of service"
+        }
+      ]
+    }
+  ]
+}
