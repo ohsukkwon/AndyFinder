@@ -44,8 +44,13 @@ class MyVersionHistory:
 '''
     VER_INFO__ver_1_251008_1500 = "ver_1_251008_1500"
     VER_DESC__ver_1_251008_1500 = '''
-    - DragTableView의 header 의 width 수정
-    '''
+- DragTableView의 header 의 width 수정
+'''
+    VER_INFO__ver_1_251013_2250 = "ver_1_251013_2250"
+    VER_DESC__ver_1_251013_2250 = '''
+- 투명도 슬라이더 아래에 파일 경로 표시용 file_path_lbl QLabel 추가
+- Ctrl+F로 검색 다이얼로그 열 때 현재 탭의 파일 경로를 자동으로 표시
+'''
 
     def __init__(self):
         pass

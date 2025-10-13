@@ -229,6 +229,22 @@ class LineViewSearchDialog(QtWidgets.QDialog):
 
         layout.addWidget(title_widget)
 
+        # 파일 경로 표시
+        self.file_path_lbl = QtWidgets.QLabel("No file loaded")
+        self.file_path_lbl.setStyleSheet("""
+            QLabel {
+                color: #0066CC;
+                font-weight: bold;
+                padding: 4px;
+                background-color: #F0F0F0;
+                border: 1px solid #CCCCCC;
+                border-radius: 3px;
+            }
+        """)
+        self.file_path_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.file_path_lbl.setWordWrap(True)
+        layout.addWidget(self.file_path_lbl)
+
         # 검색어 입력
         form_layout = QtWidgets.QFormLayout()
         self.edt_search = QtWidgets.QLineEdit()
@@ -1643,6 +1659,20 @@ class DragDropCodeEditor(CodeEditor):
         # 선택된 텍스트 확인
         cursor = self.textCursor()
         selected_text = cursor.selectedText()
+
+        # 파일 경로 설정
+        tab_content = self.parent()
+        while tab_content and not isinstance(tab_content, TabContent):
+            tab_content = tab_content.parent()
+
+        if tab_content and hasattr(tab_content, 'current_file_path'):
+            file_path = tab_content.current_file_path
+            if file_path:
+                self.search_dialog.file_path_lbl.setText(file_path)
+            else:
+                self.search_dialog.file_path_lbl.setText("No file loaded")
+        else:
+            self.search_dialog.file_path_lbl.setText("No file loaded")
 
         self.search_dialog.show()
         self.search_dialog.raise_()
