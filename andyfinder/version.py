@@ -56,7 +56,7 @@ class MyVersionHistory:
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251008_1500, self.VER_DESC__ver_1_251008_1500
+        return self.VER_INFO__ver_1_251013_2250, self.VER_DESC__ver_1_251013_2250
 
 
 # 전역 버전 인스턴스
