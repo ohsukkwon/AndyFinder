@@ -325,7 +325,7 @@ class LineViewSearchDialog(QtWidgets.QDialog):
         self.btn_close.clicked.connect(self.close)
         self.tbl_search_results.doubleClicked.connect(self.on_table_double_clicked)
 
-        self.resize(800, 600)
+        self.resize(1100, 800)
 
     def on_opacity_changed(self, value):
         """슬라이더 값 변경 시 투명도 업데이트"""
