@@ -295,7 +295,7 @@ class LineViewSearchDialog(QtWidgets.QDialog):
         # 전체검색 결과 테이블 추가
         self.tbl_search_results = QtWidgets.QTableView()
         self.tbl_search_results.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self.tbl_search_results.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.tbl_search_results.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.tbl_search_results.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.tbl_search_results.verticalHeader().setVisible(False)
         self.tbl_search_results.setAlternatingRowColors(True)
@@ -313,6 +313,9 @@ class LineViewSearchDialog(QtWidgets.QDialog):
         header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
 
         layout.addWidget(self.tbl_search_results, 1)
+
+        # tbl_search_results에 keyPressEvent 설치
+        self.tbl_search_results.keyPressEvent = self.table_key_press_event
 
         # 시그널
         self.edt_search.returnPressed.connect(self.on_search_next)
@@ -408,6 +411,46 @@ class LineViewSearchDialog(QtWidgets.QDialog):
             self.tbl_search_results.setFocus()
         except ValueError:
             pass
+
+    def table_key_press_event(self, event):
+        """tbl_search_results의 키보드 이벤트 처리 - Ctrl+C로 다중 선택 행 복사"""
+        if event.key() == Qt.Key_C and event.modifiers() == Qt.ControlModifier:
+            self.copy_selected_rows()
+        else:
+            # 기본 keyPressEvent 호출
+            QtWidgets.QTableView.keyPressEvent(self.tbl_search_results, event)
+
+    def copy_selected_rows(self):
+        """선택된 모든 행을 클립보드에 복사"""
+        selection_model = self.tbl_search_results.selectionModel()
+        if not selection_model or not selection_model.hasSelection():
+            return
+
+        # 선택된 행 인덱스 가져오기
+        selected_indexes = selection_model.selectedRows()
+        if not selected_indexes:
+            return
+
+        # 행 번호로 정렬
+        selected_rows = sorted([idx.row() for idx in selected_indexes])
+
+        # 복사할 텍스트 생성
+        lines = []
+        for row in selected_rows:
+            # LineNumber와 내용 가져오기
+            line_num_item = self.search_model.item(row, 0)
+            content_item = self.search_model.item(row, 1)
+
+            if line_num_item and content_item:
+                line_num = line_num_item.text()
+                content = content_item.text()
+                lines.append(f"{line_num}\t{content}")
+
+        if lines:
+            # 클립보드에 복사
+            clipboard = QtWidgets.QApplication.clipboard()
+            clipboard.setText('\n'.join(lines))
+            self.lbl_status.setText(f"{len(lines)}개 행이 복사되었습니다")
 
     def on_search_next(self):
         pattern = self.edt_search.text()

@@ -52,11 +52,17 @@ class MyVersionHistory:
 - Ctrl+F로 검색 다이얼로그 열 때 현재 탭의 파일 경로를 자동으로 표시
 '''
 
+    VER_INFO__ver_1_251014_1555 = "ver_1_251014_1555"
+    VER_DESC__ver_1_251014_1555 = '''
+- 사용자가 Ctrl+클릭 또는 Shift+클릭으로 여러 행을 선택한 후 Ctrl+C를 누르면 
+선택된 모든 행이 탭으로 구분된 형식(LineNumber + 내용)으로 클립보드에 복사
+'''
+
     def __init__(self):
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251013_2250, self.VER_DESC__ver_1_251013_2250
+        return self.VER_INFO__ver_1_251014_1555, self.VER_DESC__ver_1_251014_1555
 
 
 # 전역 버전 인스턴스
