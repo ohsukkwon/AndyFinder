@@ -1,1 +1,1 @@
-pyinstaller --onefile --noconsole --icon=app_andy.ico --add-data=app.png;. --name AndyFinderTab main.py
+pyinstaller --onefile --noconsole --icon=app_andy.ico --add-data=app.png;. --distpath=./ --name AndyFinderTab main.py
