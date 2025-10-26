@@ -84,6 +84,10 @@ g_icon_name = 'app.png'
 
 MIN_BUF_LOAD_SIZE = 1 * 1024 * 1024
 
+# 부분 로딩 관련 상수
+PARTIAL_LOAD_LINE_LIMIT = 10000  # 부분 로딩 시 최대 라인 수 (초기 로딩 시간 단축)
+FILE_SIZE_THRESHOLD_MB = 100  # 100MB 이상이면 부분 로딩
+
 debug_measuretime_start = 0
 debug_measuretime_snapshot = 0
 
@@ -1488,12 +1492,13 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
 
 class FileLoader(QObject):
     progress = Signal(int)
-    finished = Signal(str, str, float)  # content, encoding, duration
+    finished = Signal(str, str, float, bool, int, int)  # content, encoding, duration, is_partial, total_lines, file_size
     failed = Signal(str)
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, force_full: bool = False):
         super().__init__()
         self.path = path
+        self.force_full = force_full
         self._stop = False
 
     def stop(self):
@@ -1512,20 +1517,67 @@ class FileLoader(QObject):
     @QtCore.Slot()
     def run(self):
         start_time = time.time()
+        segment_time = start_time
         try:
-            size = os.path.getsize(self.path)
-            sample_size = min(MIN_BUF_LOAD_SIZE, size)
+            # [1] 파일 크기 확인
+            file_size = os.path.getsize(self.path)
+            t1 = time.time()
+            print(f"  [FileLoader] 1. 파일 크기 확인: {t1 - segment_time:.4f} sec ({file_size / (1024*1024):.1f} MB)")
+            segment_time = t1
+            self.progress.emit(5)
+
+            # [2] 인코딩 감지
+            sample_size = min(MIN_BUF_LOAD_SIZE, file_size)
             with open(self.path, 'rb') as f:
                 sample = f.read(sample_size)
             encoding = self.detect_encoding(sample)
-            self.progress.emit(10)
+            t2 = time.time()
+            print(f"  [FileLoader] 2. 인코딩 감지: {t2 - segment_time:.4f} sec ({encoding})")
+            segment_time = t2
+            self.progress.emit(15)
 
+            # [3] 부분/전체 로딩 판단
+            file_size_mb = file_size / (1024 * 1024)
+            is_partial = file_size_mb >= FILE_SIZE_THRESHOLD_MB and not self.force_full
+            t3 = time.time()
+            print(f"  [FileLoader] 3. 로딩 모드 결정: {t3 - segment_time:.4f} sec (부분={is_partial}, force_full={self.force_full})")
+            segment_time = t3
+            self.progress.emit(20)
+
+            # [4] 파일 전체 읽기
             with open(self.path, 'r', encoding=encoding, errors='replace') as f:
-                content = f.read()
+                full_content = f.read()
+            t4 = time.time()
+            print(f"  [FileLoader] 4. 파일 읽기: {t4 - segment_time:.4f} sec ({len(full_content):,} chars)")
+            segment_time = t4
+            self.progress.emit(60)
+
+            # [5] 라인 수 계산
+            total_lines = len(full_content.split('\n'))
+            t5 = time.time()
+            print(f"  [FileLoader] 5. 라인 수 계산: {t5 - segment_time:.4f} sec ({total_lines:,} lines)")
+            segment_time = t5
+            self.progress.emit(70)
+
+            # [6] 부분 로딩 처리
+            if is_partial:
+                lines = full_content.split('\n')
+                partial_content = '\n'.join(lines[:PARTIAL_LOAD_LINE_LIMIT])
+                content = partial_content
+                t6 = time.time()
+                print(f"  [FileLoader] 6. 부분 로딩 처리: {t6 - segment_time:.4f} sec ({PARTIAL_LOAD_LINE_LIMIT:,} lines)")
+                segment_time = t6
+            else:
+                content = full_content
+                t6 = time.time()
+                print(f"  [FileLoader] 6. 전체 로딩 처리: {t6 - segment_time:.4f} sec (전체)")
+                segment_time = t6
+            self.progress.emit(90)
 
             self.progress.emit(100)
             duration = time.time() - start_time
-            self.finished.emit(content, encoding, duration)
+            print(f"  [FileLoader] 총 소요 시간: {duration:.4f} sec")
+            self.finished.emit(content, encoding, duration, is_partial, total_lines, file_size)
         except Exception as e:
             self.failed.emit(str(e))
 
@@ -1647,6 +1699,7 @@ class ResultSearchLineEdit(LongClickLineEdit):
 class DragDropCodeEditor(CodeEditor):
     """Drag & Drop이 가능하고 내부 검색을 지원하는 CodeEditor"""
     fileDropped = Signal(str)
+    doubleClicked = Signal()  # 더블클릭 시그널 추가
 
     def __init__(self, parent=None):
         super().__init__()
@@ -1679,6 +1732,11 @@ class DragDropCodeEditor(CodeEditor):
                 event.acceptProposedAction()
             return
         super().dropEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        """더블클릭 이벤트 처리"""
+        self.doubleClicked.emit()
+        super().mouseDoubleClickEvent(event)
 
     def show_search_dialog(self):
         """검색 다이얼로그 표시 (선택된 텍스트를 검색어로 사용)"""
@@ -1878,6 +1936,19 @@ class DragDropCodeEditor(CodeEditor):
         # Ctrl+F: 검색 다이얼로그 표시 (focus가 있을 때만)
         if self.hasFocus() and event.key() == Qt.Key_F and event.modifiers() == Qt.ControlModifier:
             self.show_search_dialog()
+            event.accept()
+            return
+
+        # Ctrl+F5: 전체 파일 로딩 (focus가 있을 때만)
+        if self.hasFocus() and event.key() == Qt.Key_F5 and event.modifiers() == Qt.ControlModifier:
+            tab_content = self.parent()
+            while tab_content and not isinstance(tab_content, TabContent):
+                tab_content = tab_content.parent()
+            if tab_content:
+                if tab_content.is_partial_load:
+                    tab_content.load_full_content()
+                else:
+                    tab_content.show_status_message("이미 전체 파일이 로딩되어 있습니다.", 3000)
             event.accept()
             return
 
@@ -2422,6 +2493,16 @@ class TabContent(QtWidgets.QWidget):
         self.current_file_path: str = ""
         self.is_modified: bool = False
 
+        # 부분 로딩 관련
+        self.is_partial_load: bool = False
+        self.full_content: str = ""
+        self.total_lines: int = 0
+        self.file_size: int = 0
+        self.pending_search_after_full_load: bool = False
+
+        # lineView_clone late loading 관련
+        self.lineView_clone_loaded: bool = False
+
         self.result_search_query: str = ""
         self.result_search_index: int = -1
         self.result_search_matches: List[int] = []
@@ -2859,6 +2940,8 @@ class TabContent(QtWidgets.QWidget):
         self.lineView_clone.cursorPositionChanged.connect(self.highlight_current_line_clone)
         # 북마크 변경 시그널 연결 추가
         self.lineView_clone.cursorPositionChanged.connect(self.update_bookmark_labels)
+        # 더블클릭 시그널 연결 (late loading)
+        self.lineView_clone.doubleClicked.connect(self.load_lineview_clone_content)
 
         lineView_clone_layout.addWidget(self.lineView_clone)
 
@@ -3256,7 +3339,7 @@ class TabContent(QtWidgets.QWidget):
         else:
             QtWidgets.QMessageBox.warning(self, "경고", "올바른 파일이 아닙니다.")
 
-    def load_file(self, path):
+    def load_file(self, path, force_full: bool = False):
         global debug_measuretime_start, debug_measuretime_snapshot
         debug_measuretime_start = time.time()
 
@@ -3269,7 +3352,7 @@ class TabContent(QtWidgets.QWidget):
         self.lineView_clone.setEnabled(False)
 
         self.file_thread = QtCore.QThread(self)
-        self.file_loader = FileLoader(path)
+        self.file_loader = FileLoader(path, force_full)
         self.file_loader.moveToThread(self.file_thread)
         self.file_thread.started.connect(self.file_loader.run)
         self.file_loader.progress.connect(self.prog.setValue)
@@ -3282,6 +3365,60 @@ class TabContent(QtWidgets.QWidget):
         if not path:
             return
         self.load_file(path)
+
+    def load_full_content(self):
+        """부분 로딩 상태에서 전체 파일을 다시 로딩"""
+        if not self.is_partial_load:
+            QtWidgets.QMessageBox.information(self, "안내", "이미 전체 파일이 로딩되어 있습니다.")
+            return
+
+        if not self.current_file_path:
+            QtWidgets.QMessageBox.warning(self, "경고", "로딩할 파일 경로가 없습니다.")
+            return
+
+        # 전체 파일 다시 로딩 (force_full=True로 전체 로딩 강제)
+        self.load_file(self.current_file_path, force_full=True)
+
+    def load_lineview_clone_content(self):
+        """lineView_clone에 전체 파일 내용을 로딩 (late loading)"""
+        if self.lineView_clone_loaded:
+            self.show_status_message("이미 로딩되어 있습니다.", 2000)
+            return
+
+        if not self.current_file_path:
+            self.show_status_message("로딩할 파일이 없습니다.", 2000)
+            return
+
+        global debug_measuretime_start, debug_measuretime_snapshot
+        debug_measuretime_start = time.time()
+
+        self.show_status_message("Clone 뷰에 전체 파일을 로딩하는 중...", 0)
+        QtWidgets.QApplication.processEvents()  # UI 업데이트
+
+        try:
+            # 부분 로딩 상태든 아니든 전체 파일을 다시 읽어서 로딩
+            with open(self.current_file_path, 'r', encoding=self.encoding, errors='replace') as f:
+                full_content = f.read()
+
+            # lineView_clone에 전체 내용 로딩 - 최적화 적용
+            self.lineView_clone.setUpdatesEnabled(False)  # UI 업데이트 일시 중지
+            self.lineView_clone.blockSignals(True)        # 시그널 블로킹
+            self.lineView_clone.setPlainText(full_content)
+            self.lineView_clone.blockSignals(False)
+            self.lineView_clone.setUpdatesEnabled(True)
+            self.lineView_clone_loaded = True
+
+            debug_measuretime_snapshot = time.time()
+            duration = debug_measuretime_snapshot - debug_measuretime_start
+            print(f"debug_measuretime_duration(lineView_clone.setPlainText - full content) : {duration:.4f} sec")
+
+            loaded_lines = len(full_content.split('\n'))
+            file_size_mb = self.file_size / (1024 * 1024) if self.file_size else 0
+            self.show_status_message(f"Clone 뷰 로딩 완료 (전체 {loaded_lines:,}라인, {file_size_mb:.1f}MB, 소요 시간: {duration:.2f}초)", 5000)
+
+        except Exception as e:
+            self.show_status_message(f"Clone 뷰 로딩 실패: {str(e)}", 5000)
+            QtWidgets.QMessageBox.critical(self, "로딩 실패", f"Clone 뷰 로딩 중 오류가 발생했습니다:\n{str(e)}")
 
     def save_file(self):
         if not self.current_file_path:
@@ -3313,37 +3450,129 @@ class TabContent(QtWidgets.QWidget):
             self.file_thread.quit()
             self.file_thread.wait()
 
-    def on_file_loaded(self, content: str, encoding: str, duration: float):
-        """파일 로딩 완료 - lineView_clone에도 동일 내용 loading"""
+    def on_file_loaded(self, content: str, encoding: str, duration: float, is_partial: bool, total_lines: int, file_size: int):
+        """파일 로딩 완료 - lineView만 로딩, lineView_clone은 late loading"""
+        print(f"\n[on_file_loaded] 시작")
+        on_file_loaded_start = time.time()  # 시작 시간 기록
+        segment_time = on_file_loaded_start
+
+        # [1] 스레드 정리
         if self.file_thread:
             self.file_thread.quit()
             self.file_thread.wait()
+        t1 = time.time()
+        print(f"  [on_file_loaded] 1. 스레드 정리: {t1 - segment_time:.4f} sec")
+        segment_time = t1
 
+        # [2] 속성 설정
         self.content = content
         self.encoding = encoding
+        self.is_partial_load = is_partial
+        self.total_lines = total_lines
+        self.file_size = file_size
+        t2 = time.time()
+        print(f"  [on_file_loaded] 2. 속성 설정: {t2 - segment_time:.4f} sec")
+        segment_time = t2
 
         global debug_measuretime_start, debug_measuretime_snapshot
         debug_measuretime_snapshot = time.time()
-        print(f"debug_measuretime_duration(on_file_loaded) : {debug_measuretime_snapshot - debug_measuretime_start:.4f} sec")
+        print(f"  [on_file_loaded] FileLoader 완료 후 경과: {debug_measuretime_snapshot - debug_measuretime_start:.4f} sec")
 
-        # lineView와 lineView_clone 모두에 내용 설정
-        self.lineView.setPlainText(content)
-        self.lineView_clone.setPlainText(content)  # clone에도 동일 내용 loading
+        # [3] 안내 문구 생성
+        if is_partial:
+            remaining_lines = total_lines - len(content.split('\n'))
+            file_size_mb = file_size / (1024 * 1024)
+            notice = f"\n\n{'='*80}\n"
+            notice += f"[부분 로딩 완료]\n"
+            notice += f"파일 크기: {file_size_mb:.1f}MB | 전체 라인: {total_lines:,}줄\n"
+            notice += f"현재 표시: 처음 {PARTIAL_LOAD_LINE_LIMIT:,}줄 | 나머지: {remaining_lines:,}줄\n"
+            notice += f"\n"
+            notice += f"전체 파일을 로딩하려면:\n"
+            notice += f"  - 검색(F5) 실행 시 자동으로 전체 로딩됩니다\n"
+            notice += f"  - 또는 Ctrl+F5를 눌러 수동으로 전체 로딩할 수 있습니다\n"
+            notice += f"{'='*80}"
+            content_with_notice = content + notice
+        else:
+            content_with_notice = content
+        t3 = time.time()
+        print(f"  [on_file_loaded] 3. 안내 문구 생성: {t3 - segment_time:.4f} sec")
+        segment_time = t3
 
+        # [4] lineView에 내용 설정 - 최적화 적용
+        self.lineView.setUpdatesEnabled(False)
+        self.lineView.blockSignals(True)
+        self.lineView.setPlainText(content_with_notice)
+        self.lineView.blockSignals(False)
+        self.lineView.setUpdatesEnabled(True)
+        t4 = time.time()
+        print(f"  [on_file_loaded] 4. lineView.setPlainText: {t4 - segment_time:.4f} sec ({len(content_with_notice):,} chars)")
+        segment_time = t4
+
+        # [5] Widget 활성화
         self.lineView.setEnabled(True)
         self.lineView_clone.setEnabled(True)
+        t5 = time.time()
+        print(f"  [on_file_loaded] 5. Widget 활성화: {t5 - segment_time:.4f} sec")
+        segment_time = t5
 
-        debug_measuretime_snapshot = time.time()
-        print(f"debug_measuretime_duration(lineView.setPlainText) : {debug_measuretime_snapshot - debug_measuretime_start:.4f} sec")
+        # [6] lineView_clone 가이드 생성 및 표시
+        self.lineView_clone_loaded = False
+        self.lineView_clone.clear()
 
-        # 변경: lbl_file에 파일명 표시
+        if is_partial:
+            clone_guide = f"\n\n{'='*60}\n"
+            clone_guide += f"[Right Viewer (Clone) - Late Loading]\n\n"
+            clone_guide += f"초기 로딩 시간을 단축하기 위해\n"
+            clone_guide += f"Right Viewer는 비어있습니다.\n\n"
+            clone_guide += f"전체 파일 내용을 보려면:\n"
+            clone_guide += f"  ▶ 이 영역을 더블클릭하세요\n\n"
+            clone_guide += f"파일 정보:\n"
+            clone_guide += f"  • 크기: {file_size / (1024 * 1024):.1f}MB\n"
+            clone_guide += f"  • 전체 라인: {total_lines:,}줄\n"
+            clone_guide += f"  • 왼쪽 표시: 처음 {len(content.split(chr(10))):,}줄\n"
+            clone_guide += f"{'='*60}"
+        else:
+            clone_guide = f"\n\n{'='*60}\n"
+            clone_guide += f"[Right Viewer (Clone) - Late Loading]\n\n"
+            clone_guide += f"초기 로딩 시간을 단축하기 위해\n"
+            clone_guide += f"Right Viewer는 비어있습니다.\n\n"
+            clone_guide += f"전체 파일 내용을 보려면:\n"
+            clone_guide += f"  ▶ 이 영역을 더블클릭하세요\n\n"
+            clone_guide += f"파일 정보:\n"
+            clone_guide += f"  • 크기: {file_size / (1024 * 1024):.1f}MB\n"
+            clone_guide += f"  • 전체 라인: {total_lines:,}줄\n"
+            clone_guide += f"{'='*60}"
+
+        self.lineView_clone.setPlainText(clone_guide)
+        t6 = time.time()
+        print(f"  [on_file_loaded] 6. lineView_clone 가이드 표시: {t6 - segment_time:.4f} sec")
+        segment_time = t6
+
+        # [7] UI 라벨 업데이트
         file_name = os.path.basename(self.current_file_path) if self.current_file_path else "Unknown"
-        self.lbl_file.setText(f"파일명: {file_name} | {len(content)} chars, 인코딩: {encoding}, 라인: {len(content.split(chr(10)))}")
+        loaded_lines = len(content.split('\n'))
 
-        # lbl_status에 로딩 시간 표시
-        self.lbl_status.setText(f"Loading duration : {duration:.2f} sec(s)")
+        if is_partial:
+            file_size_mb = file_size / (1024 * 1024)
+            self.lbl_file.setText(f"파일명: {file_name} | {file_size_mb:.2f} MB, 인코딩: {encoding}, 전체 라인: {total_lines}, 로딩된 라인: {loaded_lines}")
+        else:
+            self.lbl_file.setText(f"파일명: {file_name} | {len(content)} chars, 인코딩: {encoding}, 라인: {total_lines}")
+
+        if is_partial:
+            remaining_lines = total_lines - loaded_lines
+            file_size_mb = file_size / (1024 * 1024)
+            status_msg = f"Loading duration : {duration:.2f} sec(s) | 부분 로딩 완료 ({file_size_mb:.1f}MB, 처음 {loaded_lines:,}라인) - 나머지 {remaining_lines:,} 라인은 검색(F5) 시 또는 Ctrl+F5로 전체 로딩됩니다."
+        else:
+            file_size_mb = file_size / (1024 * 1024)
+            status_msg = f"Loading duration : {duration:.2f} sec(s) | 전체 로딩 완료 ({file_size_mb:.1f}MB, {total_lines:,}라인)"
+
+        self.lbl_status.setText(status_msg)
         self.show_status_message("파일 로딩 완료", 3000)
+        t7 = time.time()
+        print(f"  [on_file_loaded] 7. UI 라벨 업데이트: {t7 - segment_time:.4f} sec")
+        segment_time = t7
 
+        # [8] 검색 결과 초기화
         self.resultsModel.set_results([])
         self.current_results = []
         self.current_result_index = -1
@@ -3355,14 +3584,35 @@ class TabContent(QtWidgets.QWidget):
         self.lbl_result_search_status.setText("")
 
         self.is_modified = False
+        t8 = time.time()
+        print(f"  [on_file_loaded] 8. 검색 결과 초기화: {t8 - segment_time:.4f} sec")
+        segment_time = t8
 
-        # MainWindow에서 탭 제목 업데이트
+        # [9] MainWindow 탭 제목 업데이트
         main_window = self.window()
         if isinstance(main_window, MainWindow):
             main_window.update_tab_title(self)
+        t9 = time.time()
+        print(f"  [on_file_loaded] 9. 탭 제목 업데이트: {t9 - segment_time:.4f} sec")
+        segment_time = t9
 
+        # [10] 색상 강조 적용
         if self.color_keywords:
             self.apply_color_highlights()
+        t10 = time.time()
+        print(f"  [on_file_loaded] 10. 색상 강조 적용: {t10 - segment_time:.4f} sec")
+        segment_time = t10
+
+        # [11] 검색 대기 처리
+        if self.pending_search_after_full_load and not is_partial:
+            self.pending_search_after_full_load = False
+            QTimer.singleShot(100, self.do_search)
+        t11 = time.time()
+        print(f"  [on_file_loaded] 11. 검색 대기 처리: {t11 - segment_time:.4f} sec")
+
+        # 총 시간 출력
+        total_time = time.time() - on_file_loaded_start
+        print(f"  [on_file_loaded] ★ 총 소요 시간: {total_time:.4f} sec\n")
 
     def close_current_file(self):
         self.resultsModel.set_results([])
@@ -3379,6 +3629,16 @@ class TabContent(QtWidgets.QWidget):
         self.result_search_index = -1
         self.result_search_matches = []
         self.lbl_result_search_status.setText("")
+
+        # 부분 로딩 관련 속성 초기화
+        self.is_partial_load = False
+        self.full_content = ""
+        self.total_lines = 0
+        self.file_size = 0
+        self.pending_search_after_full_load = False
+
+        # lineView_clone late loading 플래그 초기화
+        self.lineView_clone_loaded = False
 
     def get_context_counts(self) -> Tuple[int, int]:
         def to_int(s: str) -> int:
@@ -3423,13 +3683,20 @@ class TabContent(QtWidgets.QWidget):
             QtWidgets.QMessageBox.information(self, "안내", "먼저 (dumpstate) 파일을 여세요.")
             return
 
-        global debug_measuretime_start, debug_measuretime_snapshot
-        debug_measuretime_start = time.time()
-
         query = self.edt_query.text()
         if not query.strip():
             QtWidgets.QMessageBox.information(self, "안내", "검색어를 입력하세요.")
             return
+
+        # 부분 로딩 상태면 먼저 전체 로딩
+        if self.is_partial_load:
+            self.pending_search_after_full_load = True
+            self.show_status_message("부분 로딩 상태입니다. 전체 파일을 로딩한 후 검색을 진행합니다...", 5000)
+            self.load_full_content()
+            return
+
+        global debug_measuretime_start, debug_measuretime_snapshot
+        debug_measuretime_start = time.time()
 
         self.stop_search()
 

@@ -51,18 +51,29 @@ class MyVersionHistory:
 - 투명도 슬라이더 아래에 파일 경로 표시용 file_path_lbl QLabel 추가
 - Ctrl+F로 검색 다이얼로그 열 때 현재 탭의 파일 경로를 자동으로 표시
 '''
-
     VER_INFO__ver_1_251014_1555 = "ver_1_251014_1555"
     VER_DESC__ver_1_251014_1555 = '''
 - 사용자가 Ctrl+클릭 또는 Shift+클릭으로 여러 행을 선택한 후 Ctrl+C를 누르면 
 선택된 모든 행이 탭으로 구분된 형식(LineNumber + 내용)으로 클립보드에 복사
 '''
+    VER_INFO__ver_1_251026_1600 = "ver_1_251026_1600"
+    VER_DESC__ver_1_251026_1600 = '''
+    1. 대용량 파일 부분 로딩 시스템 (Performance Optimization)
+    2. FileLoader 클래스 개선
+    3. lineView_clone Late Loading (Memory Optimization)
+    4. TabContent 클래스 확장
+    5. Ctrl+F5 전체 로딩 기능
+    6. 검색(F5) 시 자동 전체 로딩
+    7. on_file_loaded 상세 성능 측정
+    8. UI 개선
+    9. 최적화 코드 적용
+    '''
 
     def __init__(self):
         pass
 
     def get_version_info(self):
-        return self.VER_INFO__ver_1_251014_1555, self.VER_DESC__ver_1_251014_1555
+        return self.VER_INFO__ver_1_251026_1600, self.VER_DESC__ver_1_251026_1600
 
 
 # 전역 버전 인스턴스
